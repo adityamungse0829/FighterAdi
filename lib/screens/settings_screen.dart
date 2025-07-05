@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'tasks_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final void Function(String)? onThemeChanged;
@@ -72,25 +73,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _clearAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('smallPoints');
-    await prefs.remove('mediumPoints');
-    await prefs.remove('largePoints');
-    setState(() {
-      smallPoints = 1;
-      mediumPoints = 3;
-      largePoints = 5;
-      smallController.text = '1';
-      mediumController.text = '3';
-      largeController.text = '5';
-      theme = 'default';
-    });
-    if (widget.onThemeChanged != null) {
-      widget.onThemeChanged!('default');
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All data cleared.')),
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Data'),
+        content: const Text('Are you sure you want to clear all tasks and calendar data? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
     );
+    if (confirmed == true) {
+      // Clear tasks from SharedPreferences
+      await TasksScreen.clearAllTasks();
+      // Optionally, clear any calendar-specific data here if you have it
+      // Notify the Tasks screen to clear its in-memory list
+      if (context.mounted) {
+        // Find the TasksScreen state and call clearTasksInMemory if needed
+        // (Assuming navigation keeps the TasksScreen in memory)
+        // If using a state management solution, trigger a notifier here
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All tasks and calendar data cleared.')),
+      );
+    }
   }
 
   @override
@@ -280,4 +293,11 @@ class _ThemeButton extends StatelessWidget {
       ),
     );
   }
+}
+
+Map<String, dynamic> _decodeTask(String s) {
+  final map = Map<String, dynamic>.from(Uri.splitQueryString(s));
+  map['points'] = int.tryParse(map['points'] ?? '0') ?? 0;
+  map['completed'] = map['completed'] == 'true';
+  return map;
 }

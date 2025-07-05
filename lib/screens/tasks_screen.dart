@@ -6,6 +6,11 @@ import 'package:share_plus/share_plus.dart';
 class TasksScreen extends StatefulWidget {
   const TasksScreen({Key? key}) : super(key: key);
 
+  static Future<void> clearAllTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('tasks');
+  }
+
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
@@ -15,16 +20,13 @@ class _TasksScreenState extends State<TasksScreen> {
   int mediumPoints = 3;
   int largePoints = 5;
 
-  List<Map<String, dynamic>> tasks = [
-    {'title': 'Run', 'points': 1, 'size': 'small', 'completed': false},
-    {'title': 'Make', 'points': 5, 'size': 'large', 'completed': false},
-    {'title': 'Cook', 'points': 3, 'size': 'medium', 'completed': true},
-  ];
+  List<Map<String, dynamic>> tasks = [];
 
   @override
   void initState() {
     super.initState();
     _loadPoints();
+    _loadTasks();
   }
 
   Future<void> _loadPoints() async {
@@ -35,6 +37,29 @@ class _TasksScreenState extends State<TasksScreen> {
       largePoints = prefs.getInt('largePoints') ?? 5;
     });
   }
+
+  Future<void> _loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tasksJson = prefs.getStringList('tasks') ?? [];
+    setState(() {
+      tasks = tasksJson.map((e) => _decodeTask(e)).toList();
+    });
+  }
+
+  Future<void> _saveTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tasksJson = tasks.map((e) => _encodeTask(e)).toList();
+    await prefs.setStringList('tasks', tasksJson);
+  }
+
+  Map<String, dynamic> _decodeTask(String s) {
+    final map = Map<String, dynamic>.from(Uri.splitQueryString(s));
+    map['points'] = int.tryParse(map['points'] ?? '0') ?? 0;
+    map['completed'] = map['completed'] == 'true';
+    return map;
+  }
+
+  String _encodeTask(Map<String, dynamic> t) => t.map((k, v) => MapEntry(k, v.toString())).entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
 
   Color getTaskColor(String size) {
     switch (size) {
@@ -53,6 +78,7 @@ class _TasksScreenState extends State<TasksScreen> {
     setState(() {
       tasks[index]['completed'] = !(tasks[index]['completed'] as bool);
     });
+    _saveTasks();
   }
 
   int get totalPoints => tasks.fold(0, (sum, t) => sum + (t['points'] as int));
@@ -143,6 +169,7 @@ class _TasksScreenState extends State<TasksScreen> {
                               'completed': false,
                             });
                           });
+                          _saveTasks();
                           Navigator.pop(ctx);
                         },
                         child: const Text('Save'),
@@ -174,6 +201,41 @@ class _TasksScreenState extends State<TasksScreen> {
     final shareText =
         'Fighter App Progress\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
     Share.share(shareText);
+  }
+
+  Future<void> _clearAllData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Data'),
+        content: const Text('Are you sure you want to clear all tasks and points? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('smallPoints');
+      await prefs.remove('mediumPoints');
+      await prefs.remove('largePoints');
+      setState(() {
+        smallPoints = 1;
+        mediumPoints = 3;
+        largePoints = 5;
+        tasks.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All data cleared.')),
+      );
+    }
   }
 
   @override
@@ -302,6 +364,7 @@ class _TasksScreenState extends State<TasksScreen> {
                   setState(() {
                     tasks.removeAt(i);
                   });
+                  _saveTasks();
                 },
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 14),
@@ -406,5 +469,11 @@ class _TasksScreenState extends State<TasksScreen> {
       'December',
     ];
     return months[month];
+  }
+
+  void clearTasksInMemory() {
+    setState(() {
+      tasks.clear();
+    });
   }
 }

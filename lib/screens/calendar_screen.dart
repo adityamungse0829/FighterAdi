@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
@@ -10,60 +10,56 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
+  Map<DateTime, List<Map<String, dynamic>>> _tasksByDay = {};
 
-  // Mock completion data: day -> percent (0.0 to 1.0)
-  final Map<int, double> _completion = {
-    1: 0.0,
-    2: 0.2,
-    3: 0.5,
-    4: 0.8,
-    5: 1.0,
-    6: 0.3,
-    7: 0.7,
-    8: 0.0,
-    9: 0.4,
-    10: 0.9,
-    11: 0.6,
-    12: 0.1,
-    13: 0.0,
-    14: 0.5,
-    15: 0.75,
-    16: 0.25,
-    17: 0.0,
-    18: 0.6,
-    19: 0.8,
-    20: 0.2,
-    21: 0.0,
-    22: 0.5,
-    23: 0.7,
-    24: 0.0,
-    25: 0.3,
-    26: 0.9,
-    27: 0.0,
-    28: 0.1,
-    29: 0.0,
-    30: 1.0,
-    31: 0.0,
-  };
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
 
-  // Add mock tasks per day
-  final Map<int, List<Map<String, dynamic>>> _tasksPerDay = {
-    3: [
-      {'title': 'Run', 'points': 1, 'size': 'small', 'completed': false},
-      {'title': 'Read', 'points': 3, 'size': 'medium', 'completed': true},
-    ],
-    5: [
-      {'title': 'Make', 'points': 5, 'size': 'large', 'completed': false},
-    ],
-    10: [
-      {'title': 'Cook', 'points': 3, 'size': 'medium', 'completed': true},
-      {'title': 'Write', 'points': 1, 'size': 'small', 'completed': false},
-    ],
-    30: [
-      {'title': 'Yoga', 'points': 1, 'size': 'small', 'completed': true},
-      {'title': 'Code', 'points': 5, 'size': 'large', 'completed': false},
-    ],
-  };
+  Future<void> _loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tasksJson = prefs.getStringList('tasks') ?? [];
+    final tasks = tasksJson.map((e) => _decodeTask(e)).toList();
+    final Map<DateTime, List<Map<String, dynamic>>> byDay = {};
+    for (final t in tasks) {
+      if (t['date'] != null) {
+        final date = DateTime.parse(t['date']);
+        byDay.putIfAbsent(DateTime(date.year, date.month, date.day), () => []).add(t);
+      }
+    }
+    setState(() {
+      _tasksByDay = byDay;
+    });
+  }
+
+  Map<String, dynamic> _decodeTask(String s) {
+    final map = Map<String, dynamic>.from(Uri.splitQueryString(s));
+    map['points'] = int.tryParse(map['points'] ?? '0') ?? 0;
+    map['completed'] = map['completed'] == 'true';
+    if (map['date'] != null) {
+      map['date'] = map['date'];
+    }
+    return map;
+  }
+
+  Color _getDayColor(double percent) {
+    if (percent == 0.0) return Colors.grey.shade300;
+    if (percent < 0.25) return Colors.orange.shade100;
+    if (percent < 0.5) return Colors.yellow.shade300;
+    if (percent < 0.75) return Colors.yellow.shade600;
+    return Colors.green;
+  }
+
+  double _getCompletionForDay(DateTime day) {
+    final tasks = _tasksByDay[DateTime(day.year, day.month, day.day)] ?? [];
+    if (tasks.isEmpty) return 0.0;
+    final total = tasks.fold(0, (sum, t) => sum + (t['points'] as int));
+    if (total == 0) return 0.0;
+    final completed = tasks.fold(0, (sum, t) => sum + ((t['completed'] ? t['points'] : 0) as int));
+    return completed / total;
+  }
 
   void _previousMonth() {
     setState(() {
@@ -75,14 +71,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() {
       _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
     });
-  }
-
-  Color _getDayColor(double percent) {
-    if (percent == 0.0) return Colors.grey.shade300;
-    if (percent < 0.25) return Colors.orange.shade100;
-    if (percent < 0.5) return Colors.yellow.shade300;
-    if (percent < 0.75) return Colors.yellow.shade600;
-    return Colors.green;
   }
 
   @override
@@ -159,7 +147,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     _focusedMonth.month == now.month &&
                     _focusedMonth.year == now.year &&
                     dayNum == now.day;
-                final percent = isCurrentMonth ? (_completion[dayNum] ?? 0.0) : 0.0;
+                final dayDate = DateTime(_focusedMonth.year, _focusedMonth.month, dayNum);
+                final percent = isCurrentMonth ? _getCompletionForDay(dayDate) : 0.0;
                 return GestureDetector(
                   onTap: isCurrentMonth
                       ? () {
@@ -216,7 +205,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _showTasksForDay(BuildContext context, int dayNum) {
-    final tasks = _tasksPerDay[dayNum] ?? [];
+    final tasks = _tasksByDay[DateTime(_focusedMonth.year, _focusedMonth.month, dayNum)] ?? [];
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -250,7 +239,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ...tasks.map((t) => Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: _getDayColor(_completion[dayNum] ?? 0.0).withOpacity(0.9),
+                    color: _getDayColor(_getCompletionForDay(DateTime(_focusedMonth.year, _focusedMonth.month, dayNum))).withOpacity(0.9),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: ListTile(

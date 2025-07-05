@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'screens/task_provider.dart';
 import 'screens/launcher_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/tasks_screen.dart';
@@ -7,7 +9,12 @@ import 'screens/settings_screen.dart';
 import 'widgets/floating_nav.dart';
 
 void main() {
-  runApp(const FighterApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => TaskProvider(),
+      child: const FighterApp(),
+    ),
+  );
 }
 
 class FighterApp extends StatefulWidget {
