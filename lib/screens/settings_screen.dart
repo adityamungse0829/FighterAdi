@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'task_provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:convert';
+import 'dart:io';
 
 class SettingsScreen extends StatefulWidget {
   final void Function(String)? onThemeChanged;
@@ -101,6 +104,81 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _backupData() async {
+    try {
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      final tasks = taskProvider.tasks;
+      final jsonString = taskProvider.encodeTasksToFile(tasks);
+
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/fighter_tasks_backup.json';
+      final file = File(filePath);
+      await file.writeAsString(jsonString);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Data backed up to $filePath')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to backup data: $e')),
+      );
+    }
+  }
+
+  Future<void> _restoreData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore Data'),
+        content: const Text('Are you sure you want to restore data from backup? This will overwrite your current tasks.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/fighter_tasks_backup.json';
+        final file = File(filePath);
+
+        if (!await file.exists()) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No backup file found.')),
+          );
+          return;
+        }
+
+        final jsonString = await file.readAsString();
+        final restoredTasks = taskProvider.decodeTasksFromFile(jsonString);
+        
+        // Clear existing tasks and add restored ones
+        taskProvider.clearAllTasks(); // This also clears SharedPreferences
+        for (var task in restoredTasks) {
+          taskProvider.addTask(task);
+        }
+        await taskProvider.saveTasks(); // Ensure tasks are saved to SharedPreferences
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data restored successfully.')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to restore data: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -164,6 +242,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
           child: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 30),
+        // Backup and Restore Buttons
+        ElevatedButton(
+          onPressed: _backupData,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.deepPurple,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: const Text('Backup Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _restoreData,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.deepPurple,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: const Text('Restore Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(height: 30),
         // Theme options
