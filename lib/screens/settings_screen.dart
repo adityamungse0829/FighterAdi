@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'tasks_screen.dart';
+import 'package:provider/provider.dart';
+import 'task_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   final void Function(String)? onThemeChanged;
@@ -91,15 +92,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (confirmed == true) {
-      // Clear tasks from SharedPreferences
-      await TasksScreen.clearAllTasks();
-      // Optionally, clear any calendar-specific data here if you have it
-      // Notify the Tasks screen to clear its in-memory list
-      if (context.mounted) {
-        // Find the TasksScreen state and call clearTasksInMemory if needed
-        // (Assuming navigation keeps the TasksScreen in memory)
-        // If using a state management solution, trigger a notifier here
-      }
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      taskProvider.clearAllTasks();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All tasks and calendar data cleared.')),
       );

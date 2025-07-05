@@ -58,9 +58,6 @@ class TaskProvider extends ChangeNotifier {
     final map = Map<String, dynamic>.from(Uri.splitQueryString(s));
     map['points'] = int.tryParse(map['points'] ?? '0') ?? 0;
     map['completed'] = map['completed'] == 'true';
-    if (map['date'] != null) {
-      map['date'] = map['date'];
-    }
     return map;
   }
 
