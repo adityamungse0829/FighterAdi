@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fighter - Productivity App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .phone-container {
+            width: 390px;
+            height: 844px;
+            background: #000;
+            border-radius: 40px;
+            padding: 8px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            border-radius: 32px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .status-bar {
+            height: 44px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 17px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 154px;
+            height: 37px;
+            background: #000;
+            border-radius: 0 0 18px 18px;
+            z-index: 100;
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .battery {
+            width: 24px;
+            height: 12px;
+            background: #000;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .battery::after {
+            content: '';
+            position: absolute;
+            right: -2px;
+            top: 4px;
+            width: 2px;
+            height: 4px;
+            background: #000;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .wifi {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid #000;
+            border-radius: 1px;
+        }
+
+        .signal {
+            display: flex;
+            gap: 2px;
+        }
+
+        .signal-bar {
+            width: 3px;
+            background: #000;
+            border-radius: 1px;
+        }
+
+        .signal-bar:nth-child(1) { height: 4px; }
+        .signal-bar:nth-child(2) { height: 6px; }
+        .signal-bar:nth-child(3) { height: 8px; }
+        .signal-bar:nth-child(4) { height: 10px; }
+
+        .content {
+            padding: 20px;
+            height: calc(100% - 44px - 100px);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Launch Screen */
+        .launch-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .app-logo {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #6c63ff, #4834d4);
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(108, 99, 255, 0.3);
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            border: 4px solid white;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .logo-icon::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .app-name {
+            font-size: 48px;
+            font-weight: 900;
+            color: #000;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 80px;
+        }
+
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #000;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c63ff;
+            color: white;
+        }
+
+        .btn-guest {
+            background: #e9ecef;
+            color: #666;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Tasks Screen */
+        .tasks-screen {
+            display: none;
+        }
+
+        .tasks-screen.active {
+            display: block;
+        }
+
+        .date-header {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .progress-card {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: white;
+            position: relative;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .progress-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .progress-points {
+            background: #000;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .progress-bar-container {
+            height: 32px;
+            background: rgba(139, 69, 19, 0.6);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: white;
+            width: 25%;
+            border-radius: 16px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .tasks-header {
+            font-size: 24px;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 20px;
+        }
+
+        .task-item {
+            background: #ff6b6b;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .task-item.medium {
+            background: #6c63ff;
+        }
+
+        .task-item.large {
+            background: #3742fa;
+        }
+
+        .task-item.completed {
+            opacity: 0.7;
+        }
+
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid white;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .task-checkbox.checked {
+            background: white;
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff6b6b;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .task-text {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .task-points {
+            background: white;
+            color: #333;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .add-task-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: #000;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .add-task-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+        }
+
+        /* Calendar Screen */
+        .calendar-screen {
+            display: none;
+        }
+
+        .calendar-screen.active {
+            display: block;
+        }
+
+        /* Settings Screen */
+        .settings-screen {
+            display: none;
+        }
+
+        .settings-screen.active {
+            display: block;
+        }
+
+        .settings-header {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 30px;
+        }
+
+        .settings-group {
+            margin-bottom: 25px;
+        }
+
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .settings-label {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .settings-input {
+            width: 60px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .theme-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .theme-btn {
+            padding: 8px 16px;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            cursor: pointer;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .theme-btn.active {
+            background: #000;
+            color: white;
+            border-color: #000;
+        }
+
+        .btn-danger {
+            width: 100%;
+            background: #dc3545;
+            color: white;
+            text-align: center;
+        }
+
+        .app-version {
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 40px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .calendar-nav {
+            cursor: pointer;
+            font-size: 18px;
+            color: #666;
+            padding: 10px;
+        }
+
+        .calendar-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000;
+            flex: 1;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+            padding: 10px 0;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-day.current {
+            background: #6c63ff;
+            color: white;
+            font-weight: 600;
+        }
+
+        .calendar-day.other-month {
+            color: #ccc;
+        }
+
+        .calendar-day:hover {
+            background: #f0f0f0;
+        }
+
+        /* Floating Navigation */
+        .floating-nav {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 4px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 8px 0;
+            border-radius: 12px;
+        }
+
+        .nav-item.active {
+            background: rgba(108, 99, 255, 0.1);
+            color: #6c63ff;
+        }
+
+        .nav-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+            fill: currentColor;
+        }
+
+        .nav-text {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .phone-container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+                padding: 0;
+            }
+
+            .screen {
+                border-radius: 0;
+            }
+
+            .notch {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="notch"></div>
+        <div class="screen">
+            <div class="status-bar">
+                <span>5:41</span>
+                <div class="status-icons">
+                    <div class="signal">
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                    </div>
+                    <div class="wifi"></div>
+                    <div class="battery"></div>
+                </div>
+            </div>
+
+            <!-- Launch Screen -->
+            <div class="content launch-screen" id="launch-screen">
+                <div class="app-logo">
+                    <div class="logo-icon"></div>
+                </div>
+                <h1 class="app-name">Fighter</h1>
+                <p class="tagline">Worship Strength Only.</p>
+                <div class="auth-buttons">
+                    <button class="btn btn-primary" onclick="showTasks()">Sign Up</button>
+                    <button class="btn btn-secondary" onclick="showTasks()">Log In</button>
+                    <button class="btn btn-guest" onclick="showTasks()">Continue as Guest</button>
+                </div>
+            </div>
+
+            <!-- Tasks Screen -->
+            <div class="content tasks-screen" id="tasks-screen">
+                <div class="date-header">Today, Monday,<br>June 30</div>
+                
+                <div class="progress-card">
+                    <div class="progress-header">
+                        <div class="progress-title">Daily Goal Progress</div>
+                        <div class="progress-points">3</div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar"></div>
+                    </div>
+                    <div class="progress-text">Complete 9 more points to finish today</div>
+                </div>
+
+                <div class="tasks-header">Today's Tasks</div>
+                
+                <div class="task-item small">
+                    <div class="task-left">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-text">Run</div>
+                    </div>
+                    <div class="task-points">1</div>
+                </div>
+
+                <div class="task-item large">
+                    <div class="task-left">
+                        <div class="task-checkbox" onclick="toggleTask(this)"></div>
+                        <div class="task-text">Make</div>
+                    </div>
+                    <div class="task-points">5</div>
+                </div>
+
+                <div class="task-item medium completed">
+                    <div class="task-left">
+                        <div class="task-checkbox checked" onclick="toggleTask(this)"></div>
+                        <div class="task-text">Cook</div>
+                    </div>
+                    <div class="task-points">3</div>
+                </div>
+
+                <button class="add-task-btn">+</button>
+            </div>
+
+            <!-- Calendar Screen -->
+            <div class="content calendar-screen" id="calendar-screen">
+                <div class="calendar-header">
+                    <div class="calendar-nav" onclick="previousMonth()">‹</div>
+                    <div class="calendar-title">June 2025</div>
+                    <div class="calendar-nav" onclick="nextMonth()">›</div>
+                </div>
+                
+                <div class="calendar-grid">
+                    <div class="calendar-day-header">SUN</div>
+                    <div class="calendar-day-header">MON</div>
+                    <div class="calendar-day-header">TUE</div>
+                    <div class="calendar-day-header">WED</div>
+                    <div class="calendar-day-header">THU</div>
+                    <div class="calendar-day-header">FRI</div>
+                    <div class="calendar-day-header">SAT</div>
+                    
+                    <div class="calendar-day other-month">26</div>
+                    <div class="calendar-day other-month">27</div>
+                    <div class="calendar-day other-month">28</div>
+                    <div class="calendar-day other-month">29</div>
+                    <div class="calendar-day current">30</div>
+                    <div class="calendar-day other-month">31</div>
+                    <div class="calendar-day">1</div>
+                    
+                    <div class="calendar-day">2</div>
+                    <div class="calendar-day">3</div>
+                    <div class="calendar-day">4</div>
+                    <div class="calendar-day">5</div>
+                    <div class="calendar-day">6</div>
+                    <div class="calendar-day">7</div>
+                    <div class="calendar-day">8</div>
+                    
+                    <div class="calendar-day">9</div>
+                    <div class="calendar-day">10</div>
+                    <div class="calendar-day">11</div>
+                    <div class="calendar-day">12</div>
+                    <div class="calendar-day">13</div>
+                    <div class="calendar-day">14</div>
+                    <div class="calendar-day">15</div>
+                    
+                    <div class="calendar-day">16</div>
+                    <div class="calendar-day">17</div>
+                    <div class="calendar-day">18</div>
+                    <div class="calendar-day">19</div>
+                    <div class="calendar-day">20</div>
+                    <div class="calendar-day">21</div>
+                    <div class="calendar-day">22</div>
+                    
+                    <div class="calendar-day">23</div>
+                    <div class="calendar-day">24</div>
+                    <div class="calendar-day">25</div>
+                    <div class="calendar-day">26</div>
+                    <div class="calendar-day">27</div>
+                    <div class="calendar-day">28</div>
+                    <div class="calendar-day">29</div>
+                    
+                    <div class="calendar-day current">30</div>
+                    <div class="calendar-day other-month">1</div>
+                    <div class="calendar-day other-month">2</div>
+                    <div class="calendar-day other-month">3</div>
+                    <div class="calendar-day other-month">4</div>
+                    <div class="calendar-day other-month">5</div>
+                    <div class="calendar-day other-month">6</div>
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div class="content settings-screen" id="settings-screen">
+                <div class="settings-header">Settings</div>
+
+                <div class="settings-group">
+                    <div class="settings-item">
+                        <span class="settings-label">Small Task Points</span>
+                        <input type="number" class="settings-input" value="1">
+                    </div>
+                    <div class="settings-item">
+                        <span class="settings-label">Medium Task Points</span>
+                        <input type="number" class="settings-input" value="3">
+                    </div>
+                    <div class="settings-item">
+                        <span class="settings-label">Large Task Points</span>
+                        <input type="number" class="settings-input" value="5">
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-item">
+                        <span class="settings-label">Daily Target Points</span>
+                        <input type="number" class="settings-input" value="12">
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-item">
+                        <span class="settings-label">Theme</span>
+                        <div class="theme-options">
+                            <button class="theme-btn active">Default</button>
+                            <button class="theme-btn">Dark</button>
+                            <button class="theme-btn">Mint</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                     <button class="btn btn-danger">Clear All Data</button>
+                </div>
+
+                <div class="app-version">
+                    App Version: 1.0.0
+                </div>
+            </div>
+
+            <!-- Floating Navigation -->
+            <div class="floating-nav">
+                <div class="nav-item active" onclick="showTasks()">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                    </svg>
+                    <span class="nav-text">Tasks</span>
+                </div>
+                <div class="nav-item" onclick="showCalendar()">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                    </svg>
+                    <span class="nav-text">Calendar</span>
+                </div>
+                <div class="nav-item" onclick="showSettings()">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.82,11.69,4.82,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                    </svg>
+                    <span class="nav-text">Settings</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPoints = 3;
+        let targetPoints = 12;
+
+        function showTasks() {
+            document.getElementById('launch-screen').style.display = 'none';
+            document.getElementById('tasks-screen').style.display = 'block';
+            document.getElementById('calendar-screen').style.display = 'none';
+            document.getElementById('settings-screen').style.display = 'none';
+            
+            // Update nav active state
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+        }
+
+        function showCalendar() {
+            document.getElementById('launch-screen').style.display = 'none';
+            document.getElementById('tasks-screen').style.display = 'none';
+            document.getElementById('calendar-screen').style.display = 'block';
+            document.getElementById('settings-screen').style.display = 'none';
+            
+            // Update nav active state
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector('.nav-item:nth-child(2)').classList.add('active');
+        }
+
+        function showSettings() {
+            document.getElementById('launch-screen').style.display = 'none';
+            document.getElementById('tasks-screen').style.display = 'none';
+            document.getElementById('calendar-screen').style.display = 'none';
+            document.getElementById('settings-screen').style.display = 'block';
+
+            // Update nav active state
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+        }
+
+        function toggleTask(checkbox) {
+            const taskItem = checkbox.closest('.task-item');
+            const points = parseInt(taskItem.querySelector('.task-points').textContent);
+            
+            if (checkbox.classList.contains('checked')) {
+                // Uncheck task
+                checkbox.classList.remove('checked');
+                taskItem.classList.remove('completed');
+                currentPoints -= points;
+            } else {
+                // Check task
+                checkbox.classList.add('checked');
+                taskItem.classList.add('completed');
+                currentPoints += points;
+            }
+            
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const progressPercentage = Math.min((currentPoints / targetPoints) * 100, 100);
+            const progressBar = document.querySelector('.progress-bar');
+            const progressPoints = document.querySelector('.progress-points');
+            const progressText = document.querySelector('.progress-text');
+            
+            progressBar.style.width = progressPercentage + '%';
+            progressPoints.textContent = currentPoints;
+            
+            const remaining = Math.max(targetPoints - currentPoints, 0);
+            if (remaining > 0) {
+                progressText.textContent = `Complete ${remaining} more points to finish today`;
+            } else {
+                progressText.textContent = 'Great job! You\'ve completed today\'s goal!';
+            }
+        }
+
+        function previousMonth() {
+            // Calendar navigation logic would go here
+            console.log('Previous month');
+        }
+
+        function nextMonth() {
+            // Calendar navigation logic would go here
+            console.log('Next month');
+        }
+
+        // Initialize progress
+        updateProgress();
+    </script>
+</body>
+</html>
