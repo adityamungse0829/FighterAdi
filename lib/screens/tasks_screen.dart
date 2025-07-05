@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({Key? key}) : super(key: key);
@@ -9,14 +11,30 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  int currentPoints = 3;
-  int targetPoints = 12;
+  int smallPoints = 1;
+  int mediumPoints = 3;
+  int largePoints = 5;
 
-  final List<Map<String, dynamic>> tasks = [
+  List<Map<String, dynamic>> tasks = [
     {'title': 'Run', 'points': 1, 'size': 'small', 'completed': false},
     {'title': 'Make', 'points': 5, 'size': 'large', 'completed': false},
     {'title': 'Cook', 'points': 3, 'size': 'medium', 'completed': true},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPoints();
+  }
+
+  Future<void> _loadPoints() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      smallPoints = prefs.getInt('smallPoints') ?? 1;
+      mediumPoints = prefs.getInt('mediumPoints') ?? 3;
+      largePoints = prefs.getInt('largePoints') ?? 5;
+    });
+  }
 
   Color getTaskColor(String size) {
     switch (size) {
@@ -34,12 +52,128 @@ class _TasksScreenState extends State<TasksScreen> {
   void toggleTask(int index) {
     setState(() {
       tasks[index]['completed'] = !(tasks[index]['completed'] as bool);
-      if (tasks[index]['completed']) {
-        currentPoints += tasks[index]['points'] as int;
-      } else {
-        currentPoints -= tasks[index]['points'] as int;
-      }
     });
+  }
+
+  int get totalPoints => tasks.fold(0, (sum, t) => sum + (t['points'] as int));
+  int get completedPoints => tasks.fold(0, (sum, t) => sum + ((t['completed'] ? t['points'] : 0) as int));
+
+  void _showAddTaskModal() {
+    String newTaskName = '';
+    String newTaskSize = 'small';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Add Task',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Task Name',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) => newTaskName = v,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text('Task Size', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Small'),
+                        selected: newTaskSize == 'small',
+                        onSelected: (_) => setModalState(() => newTaskSize = 'small'),
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: const Text('Medium'),
+                        selected: newTaskSize == 'medium',
+                        onSelected: (_) => setModalState(() => newTaskSize = 'medium'),
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: const Text('Large'),
+                        selected: newTaskSize == 'large',
+                        onSelected: (_) => setModalState(() => newTaskSize = 'large'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (newTaskName.trim().isEmpty) return;
+                          int points = newTaskSize == 'small'
+                              ? smallPoints
+                              : newTaskSize == 'medium'
+                                  ? mediumPoints
+                                  : largePoints;
+                          setState(() {
+                            tasks.add({
+                              'title': newTaskName.trim(),
+                              'points': points,
+                              'size': newTaskSize,
+                              'completed': false,
+                            });
+                          });
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Save'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _shareProgress() {
+    final now = DateTime.now();
+    final dateString =
+        "${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.weekday % 7]}, ${_monthName(now.month)} ${now.day}, ${now.year}";
+    final completedTasks = tasks.where((t) => t['completed']).toList();
+    final pendingTasks = tasks.where((t) => !t['completed']).toList();
+    final completedList = completedTasks.isEmpty
+        ? 'None'
+        : completedTasks.map((t) => '✔ ${t['title']} (${t['points']})').join('\n');
+    final pendingList = pendingTasks.isEmpty
+        ? 'None'
+        : pendingTasks.map((t) => '❏ ${t['title']} (${t['points']})').join('\n');
+    final percent = totalPoints == 0 ? 0 : ((completedPoints / totalPoints) * 100).round();
+    final shareText =
+        'Fighter App Progress\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
+    Share.share(shareText);
   }
 
   @override
@@ -47,7 +181,7 @@ class _TasksScreenState extends State<TasksScreen> {
     final now = DateTime.now();
     final dateString =
         "Today, ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.weekday % 7]},\n${_monthName(now.month)} ${now.day}";
-    final progress = min(currentPoints / targetPoints, 1.0);
+    final progress = totalPoints == 0 ? 0.0 : min(completedPoints / totalPoints, 1.0);
     final progressColor = progress < 0.25
         ? Colors.grey
         : progress < 0.5
@@ -99,7 +233,7 @@ class _TasksScreenState extends State<TasksScreen> {
                           backgroundColor: Colors.black,
                           radius: 16,
                           child: Text(
-                            '$currentPoints',
+                            '$completedPoints',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -124,9 +258,11 @@ class _TasksScreenState extends State<TasksScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      currentPoints < targetPoints
-                          ? 'Complete ${targetPoints - currentPoints} more points to finish today'
-                          : 'Great job! You\'ve completed today\'s goal!',
+                      totalPoints == 0
+                          ? 'No tasks today.'
+                          : completedPoints < totalPoints
+                              ? 'Complete ${totalPoints - completedPoints} more points to finish today'
+                              : 'Great job! You\'ve completed all tasks!',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -147,61 +283,79 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Task list
             ...List.generate(tasks.length, (i) {
               final t = tasks[i];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  color: getTaskColor(t['size']).withOpacity(t['completed'] ? 0.5 : 1),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: getTaskColor(t['size']).withOpacity(0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+              return Dismissible(
+                key: ValueKey(t.hashCode.toString() + t['title']),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.white, size: 28),
                 ),
-                child: ListTile(
-                  leading: GestureDetector(
-                    onTap: () => toggleTask(i),
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: t['completed'] ? Colors.white : Colors.transparent,
-                        border: Border.all(color: Colors.white, width: 2),
-                        borderRadius: BorderRadius.circular(6),
+                onDismissed: (_) {
+                  setState(() {
+                    tasks.removeAt(i);
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: getTaskColor(t['size']).withOpacity(t['completed'] ? 0.5 : 1),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: getTaskColor(t['size']).withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
-                      child: t['completed']
-                          ? const Icon(Icons.check, color: Colors.green, size: 20)
-                          : null,
-                    ),
+                    ],
                   ),
-                  title: Text(
-                    t['title'],
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      decoration: t['completed'] ? TextDecoration.lineThrough : null,
+                  child: ListTile(
+                    leading: GestureDetector(
+                      onTap: () => toggleTask(i),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: t['completed'] ? Colors.white : Colors.transparent,
+                          border: Border.all(color: Colors.white, width: 2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: t['completed']
+                            ? const Icon(Icons.check, color: Colors.green, size: 20)
+                            : null,
+                      ),
                     ),
-                  ),
-                  trailing: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
+                    title: Text(
+                      t['title'],
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        decoration: t['completed'] ? TextDecoration.lineThrough : null,
+                      ),
                     ),
-                    child: Center(
-                      child: Text(
-                        '${t['points']}',
-                        style: TextStyle(
-                          color: getTaskColor(t['size']),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                    trailing: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${t['points']}',
+                          style: TextStyle(
+                            color: getTaskColor(t['size']),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -218,12 +372,7 @@ class _TasksScreenState extends State<TasksScreen> {
           right: 20,
           child: IconButton(
             icon: const Icon(Icons.share, color: Colors.grey, size: 28),
-            onPressed: () {
-              // Share logic placeholder
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Share feature coming soon!')),
-              );
-            },
+            onPressed: _shareProgress,
           ),
         ),
         // Add task button (bottom right)
@@ -232,12 +381,7 @@ class _TasksScreenState extends State<TasksScreen> {
           right: 20,
           child: FloatingActionButton(
             backgroundColor: Colors.black,
-            onPressed: () {
-              // Add task logic placeholder
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Add Task feature coming soon!')),
-              );
-            },
+            onPressed: _showAddTaskModal,
             child: const Icon(Icons.add, size: 32),
           ),
         ),

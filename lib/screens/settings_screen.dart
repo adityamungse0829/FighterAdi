@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   final void Function(String)? onThemeChanged;
   final String? currentTheme;
-  const SettingsScreen({Key? key, this.onThemeChanged, this.currentTheme}) : super(key: key);
+  final void Function(int, int, int)? onPointsSaved;
+  const SettingsScreen({Key? key, this.onThemeChanged, this.currentTheme, this.onPointsSaved}) : super(key: key);
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -13,22 +15,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController smallController;
   late TextEditingController mediumController;
   late TextEditingController largeController;
-  late TextEditingController targetController;
 
   int smallPoints = 1;
   int mediumPoints = 3;
   int largePoints = 5;
-  int dailyTarget = 12;
   String theme = 'default';
 
   @override
   void initState() {
     super.initState();
+    _loadPoints();
     smallController = TextEditingController(text: smallPoints.toString());
     mediumController = TextEditingController(text: mediumPoints.toString());
     largeController = TextEditingController(text: largePoints.toString());
-    targetController = TextEditingController(text: dailyTarget.toString());
     theme = widget.currentTheme ?? 'default';
+  }
+
+  Future<void> _loadPoints() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      smallPoints = prefs.getInt('smallPoints') ?? 1;
+      mediumPoints = prefs.getInt('mediumPoints') ?? 3;
+      largePoints = prefs.getInt('largePoints') ?? 5;
+      smallController.text = smallPoints.toString();
+      mediumController.text = mediumPoints.toString();
+      largeController.text = largePoints.toString();
+    });
+  }
+
+  Future<void> _savePoints() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('smallPoints', smallPoints);
+    await prefs.setInt('mediumPoints', mediumPoints);
+    await prefs.setInt('largePoints', largePoints);
+    if (widget.onPointsSaved != null) {
+      widget.onPointsSaved!(smallPoints, mediumPoints, largePoints);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Points saved.')));
   }
 
   @override
@@ -36,7 +59,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     smallController.dispose();
     mediumController.dispose();
     largeController.dispose();
-    targetController.dispose();
     super.dispose();
   }
 
@@ -49,42 +71,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _clearAllData() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Clear All Data'),
-        content: const Text('Are you sure you want to clear all data? This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                smallPoints = 1;
-                mediumPoints = 3;
-                largePoints = 5;
-                dailyTarget = 12;
-                theme = 'default';
-                smallController.text = '1';
-                mediumController.text = '3';
-                largeController.text = '5';
-                targetController.text = '12';
-              });
-              if (widget.onThemeChanged != null) {
-                widget.onThemeChanged!('default');
-              }
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('All data cleared.')),
-              );
-            },
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
+  void _clearAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('smallPoints');
+    await prefs.remove('mediumPoints');
+    await prefs.remove('largePoints');
+    setState(() {
+      smallPoints = 1;
+      mediumPoints = 3;
+      largePoints = 5;
+      smallController.text = '1';
+      mediumController.text = '3';
+      largeController.text = '5';
+      theme = 'default';
+    });
+    if (widget.onThemeChanged != null) {
+      widget.onThemeChanged!('default');
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('All data cleared.')),
     );
   }
 
@@ -142,24 +147,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
         const SizedBox(height: 30),
-        // Daily target
-        const Text('Daily Target Points', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _SettingsNumberField(
-                label: 'Target',
-                controller: targetController,
-                color: Colors.deepPurple,
-                onChanged: (v) {
-                  setState(() {
-                    dailyTarget = v;
-                  });
-                },
-              ),
-            ),
-          ],
+        ElevatedButton(
+          onPressed: _savePoints,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.deepPurple,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(height: 30),
         // Theme options
@@ -223,7 +219,7 @@ class _SettingsNumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return Flexible(
       child: Column(
         children: [
           Text(
