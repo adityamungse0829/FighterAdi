@@ -19,6 +19,7 @@ List of tasks with checkboxes
 Add new task button (+)
 Task Size selector (Small/Medium/large)
 Task size display: Coloured number indicators in squares on right side of task cards
+Also a share button on top right corner.By share button we will able to share Date, Total Score/ Task score, Tasks completed, Tasks pending in text format to share with friends and family over social media. 
 -Green square with "1" for a small tasks (1 point) 
 -yellow square with "3" for medium tasks (3 points) 
 -red square with "5" for large task (5 points) 

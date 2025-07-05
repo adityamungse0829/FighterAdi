@@ -5,6 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fighter - Productivity App</title>
     <style>
+        :root {
+            --background-gradient: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+            --screen-bg: #FFFFFF;
+            --text-primary: #111827;
+            --text-secondary: #4B5563;
+            --text-muted: #4B5563;
+            --btn-primary-bg: #6B46C1;
+            --btn-primary-text: #FFFFFF;
+            --btn-secondary-bg: #F59E0B;
+            --btn-secondary-text: #FFFFFF;
+            --btn-guest-bg: #E5E7EB;
+            --btn-guest-text: #1F2937;
+            --accent-color: #6B46C1;
+            --danger-color: #F59E0B;
+            --task-small-bg: #F59E0B;
+            --task-medium-bg: #3B82F6;
+            --task-large-bg: #10B981;
+            --progress-card-bg: linear-gradient(135deg, #6B46C1, #F59E0B);
+            --floating-nav-bg: rgba(255,255,255,0.8);
+            --nav-item-active-bg: rgba(107, 70, 193, 0.1);
+            --border-color: #E5E7EB;
+        }
+
+        [data-theme="dark"] {
+            --background-gradient: linear-gradient(135deg, #111827 0%, #1F2937 100%);
+            --screen-bg: #111827;
+            --text-primary: #F3F4F6;
+            --text-secondary: #D1D5DB;
+            --text-muted: #4B5563;
+            --btn-primary-bg: #F3F4F6;
+            --btn-primary-text: #111827;
+            --btn-secondary-bg: #4B5563;
+            --btn-secondary-text: #F3F4F6;
+            --btn-guest-bg: #1F2937;
+            --btn-guest-text: #D1D5DB;
+            --accent-color: #F59E0B;
+            --danger-color: #F59E0B;
+            --task-small-bg: #F59E0B;
+            --task-medium-bg: #3B82F6;
+            --task-large-bg: #10B981;
+            --progress-card-bg: linear-gradient(135deg, #F59E0B, #6B46C1);
+            --floating-nav-bg: rgba(31, 41, 55, 0.7);
+            --nav-item-active-bg: rgba(245, 158, 11, 0.2);
+            --border-color: #4B5563;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -12,13 +58,14 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'SF Pro Display', system-ui, -apple-system, sans-serif;
+            background: var(--background-gradient);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            transition: background 0.3s ease;
         }
 
         .phone-container {
@@ -34,22 +81,24 @@
         .screen {
             width: 100%;
             height: 100%;
-            background: #f8f9fa;
+            background: var(--screen-bg);
             border-radius: 32px;
             overflow: hidden;
             position: relative;
+            transition: background 0.3s ease;
         }
 
         .status-bar {
             height: 44px;
-            background: #f8f9fa;
+            background: var(--screen-bg);
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 20px;
             font-size: 17px;
             font-weight: 600;
-            color: #000;
+            color: var(--text-primary);
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         .notch {
@@ -167,13 +216,13 @@
         .app-name {
             font-size: 48px;
             font-weight: 900;
-            color: #000;
+            color: var(--text-primary);
             margin-bottom: 10px;
         }
 
         .tagline {
             font-size: 18px;
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 80px;
         }
 
@@ -196,18 +245,18 @@
         }
 
         .btn-primary {
-            background: #000;
-            color: white;
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
         }
 
         .btn-secondary {
-            background: #6c63ff;
-            color: white;
+            background: var(--btn-secondary-bg);
+            color: var(--btn-secondary-text);
         }
 
         .btn-guest {
-            background: #e9ecef;
-            color: #666;
+            background: var(--btn-guest-bg);
+            color: var(--btn-guest-text);
         }
 
         .btn:hover {
@@ -227,13 +276,13 @@
         .date-header {
             font-size: 28px;
             font-weight: 700;
-            color: #000;
+            color: var(--text-primary);
             margin-bottom: 20px;
             line-height: 1.2;
         }
 
         .progress-card {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            background: var(--progress-card-bg);
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 30px;
@@ -290,12 +339,12 @@
         .tasks-header {
             font-size: 24px;
             font-weight: 700;
-            color: #000;
+            color: var(--text-primary);
             margin-bottom: 20px;
         }
 
         .task-item {
-            background: #ff6b6b;
+            background: var(--task-small-bg);
             border-radius: 12px;
             padding: 18px;
             margin-bottom: 12px;
@@ -308,11 +357,11 @@
         }
 
         .task-item.medium {
-            background: #6c63ff;
+            background: var(--task-medium-bg);
         }
 
         .task-item.large {
-            background: #3742fa;
+            background: var(--task-large-bg);
         }
 
         .task-item.completed {
@@ -397,6 +446,14 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.4);
         }
 
+        .share-btn {
+            position: absolute;
+            top: 28px;
+            right: 20px;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
         /* Calendar Screen */
         .calendar-screen {
             display: none;
@@ -418,12 +475,8 @@
         .settings-header {
             font-size: 28px;
             font-weight: 700;
-            color: #000;
+            color: var(--text-primary);
             margin-bottom: 30px;
-        }
-
-        .settings-group {
-            margin-bottom: 25px;
         }
 
         .settings-item {
@@ -431,53 +484,52 @@
             justify-content: space-between;
             align-items: center;
             padding: 18px 0;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .settings-label {
             font-size: 18px;
             font-weight: 500;
+            color: var(--text-primary);
         }
 
         .settings-input {
             width: 60px;
             padding: 8px;
             border-radius: 8px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--border-color);
             text-align: center;
             font-size: 16px;
-        }
-
-        .theme-options {
-            display: flex;
-            gap: 10px;
+            background: var(--screen-bg);
+            color: var(--text-primary);
         }
 
         .theme-btn {
             padding: 8px 16px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             cursor: pointer;
-            background: #f8f9fa;
+            background: var(--screen-bg);
+            color: var(--text-primary);
             transition: all 0.3s ease;
         }
 
         .theme-btn.active {
-            background: #000;
+            background: var(--accent-color);
             color: white;
-            border-color: #000;
+            border-color: var(--accent-color);
         }
 
         .btn-danger {
             width: 100%;
-            background: #dc3545;
+            background: var(--danger-color);
             color: white;
             text-align: center;
         }
 
         .app-version {
             text-align: center;
-            color: #6c757d;
+            color: var(--text-muted);
             font-size: 14px;
             margin-top: 40px;
         }
@@ -492,14 +544,14 @@
         .calendar-nav {
             cursor: pointer;
             font-size: 18px;
-            color: #666;
+            color: var(--text-secondary);
             padding: 10px;
         }
 
         .calendar-title {
             font-size: 28px;
             font-weight: 700;
-            color: #000;
+            color: var(--text-primary);
             flex: 1;
             text-align: center;
         }
@@ -514,7 +566,7 @@
         .calendar-day-header {
             text-align: center;
             font-size: 14px;
-            color: #666;
+            color: var(--text-secondary);
             font-weight: 500;
             padding: 10px 0;
         }
@@ -528,10 +580,11 @@
             cursor: pointer;
             border-radius: 8px;
             transition: all 0.3s ease;
+            color: var(--text-primary);
         }
 
         .calendar-day.current {
-            background: #6c63ff;
+            background: var(--accent-color);
             color: white;
             font-weight: 600;
         }
@@ -550,7 +603,7 @@
             bottom: 20px;
             left: 20px;
             right: 20px;
-            background: rgba(255,255,255,0.9);
+            background: var(--floating-nav-bg);
             backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 4px;
@@ -559,6 +612,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             border: 1px solid rgba(255,255,255,0.2);
             z-index: 100;
+            transition: background 0.3s ease;
         }
 
         .nav-item {
@@ -570,11 +624,12 @@
             transition: all 0.3s ease;
             padding: 8px 0;
             border-radius: 12px;
+            color: var(--text-secondary);
         }
 
         .nav-item.active {
-            background: rgba(108, 99, 255, 0.1);
-            color: #6c63ff;
+            background: var(--nav-item-active-bg);
+            color: var(--accent-color);
         }
 
         .nav-item:hover {
@@ -646,6 +701,9 @@
 
             <!-- Tasks Screen -->
             <div class="content tasks-screen" id="tasks-screen">
+                <div class="share-btn" onclick="shareTasks()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-share-2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                </div>
                 <div class="date-header">Today, Monday,<br>June 30</div>
                 
                 <div class="progress-card">
@@ -907,6 +965,65 @@
             // Calendar navigation logic would go here
             console.log('Next month');
         }
+
+        function shareTasks() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'My Fighter App Progress',
+                    text: `I've completed ${currentPoints} points out of my ${targetPoints} point goal today!`,
+                })
+                .then(() => console.log('Successful share'))
+                .catch((error) => console.log('Error sharing', error));
+            } else {
+                alert('Sharing not supported on this browser, but you can manually share your progress!');
+            }
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+
+            // Update active theme button
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase() === theme) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                // Reset points and tasks
+                currentPoints = 0;
+                targetPoints = 12; // or a default value
+                document.querySelectorAll('.task-item').forEach(item => item.remove());
+                updateProgress();
+
+                // Reset settings to default
+                document.querySelector('.settings-input[value="12"]').value = 12;
+                document.querySelector('.settings-input[value="1"]').value = 1;
+                document.querySelector('.settings-input[value="3"]').value = 3;
+                document.querySelector('.settings-input[value="5"]').value = 5;
+                setTheme('default');
+
+                alert('All data has been cleared.');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'default';
+            setTheme(savedTheme);
+
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setTheme(btn.textContent.toLowerCase());
+                });
+            });
+
+            document.querySelector('.btn-danger').addEventListener('click', clearAllData);
+        });
 
         // Initialize progress
         updateProgress();
