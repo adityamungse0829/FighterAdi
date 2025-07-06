@@ -981,12 +981,10 @@
 
         function previousMonth() {
             // Calendar navigation logic would go here
-            console.log('Previous month');
         }
 
         function nextMonth() {
             // Calendar navigation logic would go here
-            console.log('Next month');
         }
 
         function shareTasks() {
@@ -995,8 +993,8 @@
                     title: 'My Fighter App Progress',
                     text: `I've completed ${currentPoints} points out of my ${targetPoints} point goal today!`,
                 })
-                .then(() => console.log('Successful share'))
-                .catch((error) => console.log('Error sharing', error));
+                .then(() => {})
+                .catch((error) => {});
             } else {
                 alert('Sharing not supported on this browser, but you can manually share your progress!');
             }

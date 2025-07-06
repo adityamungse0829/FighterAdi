@@ -222,12 +222,8 @@ class _TasksScreenState extends State<TasksScreen> {
 
       List<UsageInfo> usageStats = await UsageStats.queryUsageStats(startOfDay, endOfDay);
       
-      print("Found ${usageStats.length} usage stats entries");
-      
       int totalTimeInSeconds = 0;
       for (var info in usageStats) {
-        print("UsageInfo: ${info.packageName}, TotalTimeInForeground: ${info.totalTimeInForeground}");
-        
         // Skip system apps and only count user apps (similar to Digital Wellbeing)
         if (info.packageName?.startsWith('com.android.') == true || 
             info.packageName?.startsWith('android.') == true ||
@@ -237,7 +233,6 @@ class _TasksScreenState extends State<TasksScreen> {
             info.packageName == 'com.android.systemui' ||
             info.packageName == 'com.android.settings' ||
             info.packageName == 'com.google.android.apps.wellbeing') {
-          print("Skipping system app: ${info.packageName}");
           continue;
         }
         
@@ -253,11 +248,8 @@ class _TasksScreenState extends State<TasksScreen> {
             timeInMs = int.tryParse(timeInForeground as String) ?? 0;
           }
           totalTimeInSeconds += timeInMs;
-          print("Added ${timeInMs}ms for ${info.packageName}");
         }
       }
-      
-      print("Total time in milliseconds: $totalTimeInSeconds");
 
       Duration screenTimeDuration = Duration(milliseconds: totalTimeInSeconds);
       String formattedScreenTime = "";
@@ -268,7 +260,6 @@ class _TasksScreenState extends State<TasksScreen> {
 
       return "Screen Time: $formattedScreenTime";
     } catch (e) {
-      print("Error getting screen time: $e");
       return "Screen Time: N/A (Error)";
     }
   }
@@ -501,14 +492,49 @@ class _TasksScreenState extends State<TasksScreen> {
                                 : null,
                           ),
                         ),
-                        title: Text(
-                          t.title,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            decoration: t.completed ? TextDecoration.lineThrough : null,
-                          ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                t.title,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: t.completed ? TextDecoration.lineThrough : null,
+                                ),
+                              ),
+                            ),
+                            if (t.isRecurring) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.repeat,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      'Daily',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         trailing: Container(
                           width: 32,

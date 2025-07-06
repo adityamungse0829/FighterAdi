@@ -28,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int smallPoints = 1;
   int mediumPoints = 3;
   int largePoints = 5;
-  String theme = 'default';
 
   @override
   void initState() {
@@ -37,7 +36,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     smallController = TextEditingController(text: smallPoints.toString());
     mediumController = TextEditingController(text: mediumPoints.toString());
     largeController = TextEditingController(text: largePoints.toString());
-    theme = widget.currentTheme ?? 'default';
   }
 
   Future<void> _loadPoints() async {
@@ -72,9 +70,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _setTheme(String value) {
-    setState(() {
-      theme = value;
-    });
     if (widget.onThemeChanged != null) {
       widget.onThemeChanged!(value);
     }
@@ -364,21 +359,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 _ThemeButton(
                   label: 'Default',
-                  selected: theme == 'default',
+                  selected: widget.currentTheme == 'default',
                   color: Colors.deepPurple,
                   onTap: () => _setTheme('default'),
                 ),
                 const SizedBox(width: 10),
                 _ThemeButton(
                   label: 'Dark',
-                  selected: theme == 'dark',
+                  selected: widget.currentTheme == 'dark',
                   color: Colors.black,
                   onTap: () => _setTheme('dark'),
                 ),
                 const SizedBox(width: 10),
                 _ThemeButton(
                   label: 'Mint',
-                  selected: theme == 'mint',
+                  selected: widget.currentTheme == 'mint',
                   color: Colors.teal,
                   onTap: () => _setTheme('mint'),
                 ),

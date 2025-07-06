@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/task_provider.dart';
 import 'screens/user_provider.dart';
 import 'screens/auth_screen.dart';
@@ -29,6 +30,22 @@ class FighterApp extends StatefulWidget {
 
 class _FighterAppState extends State<FighterApp> {
   String _theme = 'default';
+  bool _isThemeLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedTheme = prefs.getString('selected_theme') ?? 'default';
+    setState(() {
+      _theme = savedTheme;
+      _isThemeLoaded = true;
+    });
+  }
 
   ThemeData get _currentTheme {
     switch (_theme) {
@@ -59,7 +76,9 @@ class _FighterAppState extends State<FighterApp> {
     }
   }
 
-  void _setTheme(String theme) {
+  void _setTheme(String theme) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_theme', theme);
     setState(() {
       _theme = theme;
     });
@@ -67,6 +86,16 @@ class _FighterAppState extends State<FighterApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isThemeLoaded) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'Fighter',

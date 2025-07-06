@@ -16,12 +16,8 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
-  late final List<Widget> _screens;
-
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
+  List<Widget> get _screens {
+    return [
       const TasksScreen(),
       const CalendarScreen(),
       SettingsScreen(
