@@ -86,7 +86,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
         return Container(
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -97,22 +96,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
               if (tasksForDay.isEmpty)
                 const Text('No tasks for this day.')
               else
-                ...tasksForDay.map((task) => ListTile(
-                  leading: Icon(
-                    task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
-                    color: task.completed ? Colors.green : Colors.grey,
+                Expanded(
+                  child: ListView(
+                    children: tasksForDay.map((task) => ListTile(
+                      leading: Icon(
+                        task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: task.completed ? Colors.green : Colors.grey,
+                      ),
+                      title: Text(
+                        task.title,
+                        style: TextStyle(
+                          decoration: task.completed ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                      trailing: Text(
+                        '${task.points} pts',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    )).toList(),
                   ),
-                  title: Text(
-                    task.title,
-                    style: TextStyle(
-                      decoration: task.completed ? TextDecoration.lineThrough : null,
-                    ),
-                  ),
-                  trailing: Text(
-                    '${task.points} pts',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                )),
+                ),
             ],
           ),
         );
