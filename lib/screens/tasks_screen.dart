@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
-import 'package:usage_stats/usage_stats.dart';
 import 'task_provider.dart';
 import 'user_provider.dart';
 import '../models/task.dart'; // Import the Task model
@@ -171,99 +170,6 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Future<String> _getScreenTime() async {
-    try {
-      bool hasPermission = await UsageStats.checkUsagePermission() ?? false;
-      if (!hasPermission) {
-        // Show a dialog to explain why we need permission
-        bool shouldRequestPermission = await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Screen Time Permission'),
-              content: const Text(
-                'To show your screen time in the progress report, Fighter needs access to usage statistics. '
-                'This will open your device settings where you can grant permission.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Grant Permission'),
-                ),
-              ],
-            );
-          },
-        ) ?? false;
-
-        if (!shouldRequestPermission) {
-          return "Screen time permission not granted.";
-        }
-
-        // Prompt user to grant permission
-        await UsageStats.grantUsagePermission();
-        
-        // Wait a bit for user to return from settings
-        await Future.delayed(const Duration(seconds: 1));
-        
-        // After user returns from settings, check permission again
-        hasPermission = await UsageStats.checkUsagePermission() ?? false;
-        if (!hasPermission) {
-          return "Screen time permission denied.";
-        }
-      }
-
-      DateTime now = DateTime.now();
-      DateTime startOfDay = DateTime(now.year, now.month, now.day, 00, 00, 01);
-      DateTime endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-      List<UsageInfo> usageStats = await UsageStats.queryUsageStats(startOfDay, endOfDay);
-      
-      int totalTimeInSeconds = 0;
-      for (var info in usageStats) {
-        // Skip system apps and only count user apps (similar to Digital Wellbeing)
-        if (info.packageName?.startsWith('com.android.') == true || 
-            info.packageName?.startsWith('android.') == true ||
-            info.packageName?.startsWith('com.google.android.') == true ||
-            info.packageName?.startsWith('com.samsung.') == true ||
-            info.packageName?.startsWith('com.sec.') == true ||
-            info.packageName == 'com.android.systemui' ||
-            info.packageName == 'com.android.settings' ||
-            info.packageName == 'com.google.android.apps.wellbeing') {
-          continue;
-        }
-        
-        var timeInForeground = info.totalTimeInForeground;
-        if (timeInForeground != null) {
-          // The totalTimeInForeground is already in milliseconds
-          int timeInMs = 0;
-          if (timeInForeground is int) {
-            timeInMs = timeInForeground as int;
-          } else if (timeInForeground is double) {
-            timeInMs = (timeInForeground as double).toInt();
-          } else if (timeInForeground is String) {
-            timeInMs = int.tryParse(timeInForeground as String) ?? 0;
-          }
-          totalTimeInSeconds += timeInMs;
-        }
-      }
-
-      Duration screenTimeDuration = Duration(milliseconds: totalTimeInSeconds);
-      String formattedScreenTime = "";
-      if (screenTimeDuration.inHours > 0) {
-        formattedScreenTime += "${screenTimeDuration.inHours}h ";
-      }
-      formattedScreenTime += "${screenTimeDuration.inMinutes.remainder(60)}m";
-
-      return "Screen Time: $formattedScreenTime";
-    } catch (e) {
-      return "Screen Time: N/A (Error)";
-    }
-  }
-
   void _shareProgress() async {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -286,9 +192,8 @@ class _TasksScreenState extends State<TasksScreen> {
     final percent = totalPoints == 0 ? 0 : ((completedPoints / totalPoints) * 100).round();
     
     final userName = userProvider.displayName;
-    final screenTime = await _getScreenTime();
     final shareText =
-        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n$screenTime\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
+        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
     Share.share(shareText);
   }
 
@@ -312,14 +217,6 @@ class _TasksScreenState extends State<TasksScreen> {
                 : progress < 0.75
                     ? Colors.yellow.shade600
                     : Colors.green;
-
-        return FutureBuilder<String>(
-          future: _getScreenTime(),
-          builder: (context, screenTimeSnapshot) {
-            final screenTimeText = screenTimeSnapshot.data ?? "Loading...";
-            final hasScreenTimePermission = !screenTimeText.contains("permission") && 
-                                         !screenTimeText.contains("N/A") && 
-                                         !screenTimeText.contains("Loading");
 
         return Stack(
           children: [
@@ -410,27 +307,6 @@ class _TasksScreenState extends State<TasksScreen> {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        if (hasScreenTimePermission) ...[
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.screen_rotation,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                screenTimeText,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -581,8 +457,6 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
             ),
           ],
-        );
-          },
         );
       },
     );
