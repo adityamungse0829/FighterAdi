@@ -192,8 +192,12 @@ class _TasksScreenState extends State<TasksScreen> {
     final percent = totalPoints == 0 ? 0 : ((completedPoints / totalPoints) * 100).round();
     
     final userName = userProvider.displayName;
+    final consistencyText = taskProvider.consistencyCount > 0
+        ? '\nConsistency: ${taskProvider.consistencyCount} Day${taskProvider.consistencyCount > 1 ? 's' : ''} 🔥'
+        : '';
+
     final shareText =
-        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
+        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n$consistencyText\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
     Share.share(shareText);
   }
 
@@ -267,17 +271,28 @@ class _TasksScreenState extends State<TasksScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            CircleAvatar(
-                              backgroundColor: Colors.black,
-                              radius: 16,
-                              child: Text(
-                                '$completedPoints',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                            if (taskProvider.consistencyCount > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.bolt, color: Colors.white, size: 20),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${taskProvider.consistencyCount} Day${taskProvider.consistencyCount > 1 ? 's' : ''}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
