@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'task_provider.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:convert';
-import 'dart:io';
+import 'user_provider.dart';
+import 'auth_screen.dart';
+import '../main.dart';
+import 'dart:convert'; // For JSON encoding/decoding
+import 'dart:io'; // For File operations
+import 'package:path_provider/path_provider.dart'; // For getting document directory
+import '../models/task.dart'; // Import the Task model
 
 class SettingsScreen extends StatefulWidget {
   final void Function(String)? onThemeChanged;
@@ -104,23 +108,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout? You will need to authenticate again.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      
+      // Clear user data
+      await userProvider.clearUserData();
+      taskProvider.setUserContext(null);
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logged out successfully')),
+        );
+      }
+      
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const AuthScreen(),
+          ),
+          (route) => false,
+        );
+      }
+    }
+  }
+
   Future<void> _backupData() async {
     try {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      final tasks = taskProvider.tasks;
-      final jsonString = taskProvider.encodeTasksToFile(tasks);
+      final List<Task> tasks = taskProvider.tasks;
+      final String jsonString = jsonEncode(tasks.map((task) => task.toJson()).toList());
 
       final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/fighter_tasks_backup.json';
-      final file = File(filePath);
-      await file.writeAsString(jsonString);
+      final File backupFile = File('${directory.path}/fighter_tasks_backup.json');
+
+      await backupFile.writeAsString(jsonString);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Data backed up to $filePath')),
+        SnackBar(content: Text('Backup successful! Saved to: ${backupFile.path}')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to backup data: $e')),
+        SnackBar(content: Text('Backup failed: $e')),
       );
     }
   }
@@ -130,7 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Restore Data'),
-        content: const Text('Are you sure you want to restore data from backup? This will overwrite your current tasks.'),
+        content: const Text('Are you sure you want to restore data? This will overwrite all your current tasks.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -146,34 +194,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed == true) {
       try {
-        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
         final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}/fighter_tasks_backup.json';
-        final file = File(filePath);
+        final File backupFile = File('${directory.path}/fighter_tasks_backup.json');
 
-        if (!await file.exists()) {
+        if (!await backupFile.exists()) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No backup file found.')),
+            const SnackBar(content: Text('Backup file not found.')),
           );
           return;
         }
 
-        final jsonString = await file.readAsString();
-        final restoredTasks = taskProvider.decodeTasksFromFile(jsonString);
-        
-        // Clear existing tasks and add restored ones
-        taskProvider.clearAllTasks(); // This also clears SharedPreferences
-        for (var task in restoredTasks) {
-          taskProvider.addTask(task);
-        }
-        await taskProvider.saveTasks(); // Ensure tasks are saved to SharedPreferences
+        final String jsonString = await backupFile.readAsString();
+        final List<dynamic> decodedData = jsonDecode(jsonString);
+        // Assuming Task has a fromJson constructor
+        final List<Task> restoredTasks = decodedData.map((item) => Task.fromJson(item)).toList();
+
+        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+        taskProvider.setTasks(restoredTasks);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data restored successfully.')),
+          const SnackBar(content: Text('Data restored successfully!')),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to restore data: $e')),
+          SnackBar(content: Text('Restore failed: $e')),
         );
       }
     }
@@ -181,140 +225,211 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
-      children: [
-        Text(
-          'Settings',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onBackground,
-          ),
-        ),
-        const SizedBox(height: 30),
-        // Task size points
-        const Text('Task Size Points', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Row(
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
           children: [
-            _SettingsNumberField(
-              label: 'Small',
-              controller: smallController,
-              color: Colors.green,
-              onChanged: (v) {
-                setState(() {
-                  smallPoints = v;
-                });
-              },
+            Text(
+              'Settings',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onBackground,
+              ),
             ),
-            const SizedBox(width: 12),
-            _SettingsNumberField(
-              label: 'Medium',
-              controller: mediumController,
-              color: Colors.orange,
-              onChanged: (v) {
-                setState(() {
-                  mediumPoints = v;
-                });
-              },
+            const SizedBox(height: 30),
+            
+            // User Information Section
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.deepPurple.shade100,
+                          radius: 24,
+                          child: Icon(
+                            userProvider.isGuest ? Icons.person_outline : Icons.person,
+                            color: Colors.deepPurple,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userProvider.displayName,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                userProvider.isGuest ? 'Guest User' : 'Named User',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _logout,
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Logout'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
-            _SettingsNumberField(
-              label: 'Large',
-              controller: largeController,
-              color: Colors.red,
-              onChanged: (v) {
-                setState(() {
-                  largePoints = v;
-                });
-              },
+            const SizedBox(height: 30),
+            
+            // Task size points
+            const Text('Task Size Points', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _SettingsNumberField(
+                  label: 'Small',
+                  controller: smallController,
+                  color: Colors.green,
+                  onChanged: (v) {
+                    setState(() {
+                      smallPoints = v;
+                    });
+                  },
+                ),
+                const SizedBox(width: 12),
+                _SettingsNumberField(
+                  label: 'Medium',
+                  controller: mediumController,
+                  color: Colors.orange,
+                  onChanged: (v) {
+                    setState(() {
+                      mediumPoints = v;
+                    });
+                  },
+                ),
+                const SizedBox(width: 12),
+                _SettingsNumberField(
+                  label: 'Large',
+                  controller: largeController,
+                  color: Colors.red,
+                  onChanged: (v) {
+                    setState(() {
+                      largePoints = v;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _savePoints,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 30),
+            // Theme options
+            const Text('Theme', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _ThemeButton(
+                  label: 'Default',
+                  selected: theme == 'default',
+                  color: Colors.deepPurple,
+                  onTap: () => _setTheme('default'),
+                ),
+                const SizedBox(width: 10),
+                _ThemeButton(
+                  label: 'Dark',
+                  selected: theme == 'dark',
+                  color: Colors.black,
+                  onTap: () => _setTheme('dark'),
+                ),
+                const SizedBox(width: 10),
+                _ThemeButton(
+                  label: 'Mint',
+                  selected: theme == 'mint',
+                  color: Colors.teal,
+                  onTap: () => _setTheme('mint'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            // Backup and Restore Buttons
+            ElevatedButton(
+              onPressed: _backupData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueGrey,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('Backup Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _restoreData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueGrey,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('Restore Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 30),
+            // Clear all data
+            ElevatedButton(
+              onPressed: _clearAllData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('Clear All Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 40),
+            // App version
+            const Center(
+              child: Text(
+                'App Version: 1.0.0',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
             ),
           ],
-        ),
-        const SizedBox(height: 30),
-        ElevatedButton(
-          onPressed: _savePoints,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 30),
-        // Backup and Restore Buttons
-        ElevatedButton(
-          onPressed: _backupData,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: const Text('Backup Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: _restoreData,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: const Text('Restore Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 30),
-        // Theme options
-        const Text('Theme', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            _ThemeButton(
-              label: 'Default',
-              selected: theme == 'default',
-              color: Colors.deepPurple,
-              onTap: () => _setTheme('default'),
-            ),
-            const SizedBox(width: 10),
-            _ThemeButton(
-              label: 'Dark',
-              selected: theme == 'dark',
-              color: Colors.black,
-              onTap: () => _setTheme('dark'),
-            ),
-            const SizedBox(width: 10),
-            _ThemeButton(
-              label: 'Mint',
-              selected: theme == 'mint',
-              color: Colors.teal,
-              onTap: () => _setTheme('mint'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 30),
-        // Clear all data
-        ElevatedButton(
-          onPressed: _clearAllData,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: const Text('Clear All Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 40),
-        // App version
-        const Center(
-          child: Text(
-            'App Version: 1.0.0',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -389,11 +504,4 @@ class _ThemeButton extends StatelessWidget {
       ),
     );
   }
-}
-
-Map<String, dynamic> _decodeTask(String s) {
-  final map = Map<String, dynamic>.from(Uri.splitQueryString(s));
-  map['points'] = int.tryParse(map['points'] ?? '0') ?? 0;
-  map['completed'] = map['completed'] == 'true';
-  return map;
 }

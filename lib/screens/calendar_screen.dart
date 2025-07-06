@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'task_provider.dart';
+import '../models/task.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
@@ -21,11 +22,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Colors.green;
   }
 
-  double _getCompletionForDay(DateTime day, List<Map<String, dynamic>> allTasks) {
+  double _getCompletionForDay(DateTime day, List<Task> allTasks) {
     final tasks = allTasks.where((t) {
-      if (t['date'] != null && t['date'].toString().isNotEmpty) {
+      if (t.dueDate != null) {
         try {
-          final taskDate = DateTime.parse(t['date']);
+          final taskDate = t.dueDate;
           return taskDate.year == day.year && 
                  taskDate.month == day.month && 
                  taskDate.day == day.day;
@@ -38,9 +39,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }).toList();
     
     if (tasks.isEmpty) return 0.0;
-    final total = tasks.fold(0, (sum, t) => sum + (t['points'] as int));
+    final total = tasks.fold(0, (sum, t) => sum + t.points);
     if (total == 0) return 0.0;
-    final completed = tasks.fold(0, (sum, t) => sum + ((t['completed'] ? t['points'] : 0) as int));
+    final completed = tasks.fold(0, (sum, t) => sum + (t.completed ? t.points : 0));
     return completed / total;
   }
 
@@ -62,9 +63,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final dayDate = DateTime(_focusedMonth.year, _focusedMonth.month, dayNum);
     
     final tasksForDay = allTasks.where((t) {
-      if (t['date'] != null && t['date'].toString().isNotEmpty) {
+      if (t.dueDate != null) {
         try {
-          final taskDate = DateTime.parse(t['date']);
+          final taskDate = t.dueDate;
           return taskDate.year == dayDate.year && 
                  taskDate.month == dayDate.month && 
                  taskDate.day == dayDate.day;
@@ -98,17 +99,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
               else
                 ...tasksForDay.map((task) => ListTile(
                   leading: Icon(
-                    task['completed'] ? Icons.check_circle : Icons.radio_button_unchecked,
-                    color: task['completed'] ? Colors.green : Colors.grey,
+                    task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                    color: task.completed ? Colors.green : Colors.grey,
                   ),
                   title: Text(
-                    task['title'],
+                    task.title,
                     style: TextStyle(
-                      decoration: task['completed'] ? TextDecoration.lineThrough : null,
+                      decoration: task.completed ? TextDecoration.lineThrough : null,
                     ),
                   ),
                   trailing: Text(
-                    '${task['points']} pts',
+                    '${task.points} pts',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 )),

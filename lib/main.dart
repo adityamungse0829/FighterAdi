@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/task_provider.dart';
-import 'screens/launcher_screen.dart';
+import 'screens/user_provider.dart';
 import 'screens/auth_screen.dart';
-import 'screens/tasks_screen.dart';
-import 'screens/calendar_screen.dart';
-import 'screens/settings_screen.dart';
-import 'widgets/floating_nav.dart';
+import 'widgets/main_shell.dart';
+
+// Global navigator key for navigation from anywhere
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => TaskProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TaskProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
       child: const FighterApp(),
     ),
   );
@@ -65,55 +68,39 @@ class _FighterAppState extends State<FighterApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Fighter',
       theme: _currentTheme,
-      home: LauncherScreen(onThemeChanged: _setTheme, currentTheme: _theme),
+      home: Consumer<UserProvider>(
+        builder: (context, userProvider, child) {
+          if (!userProvider.isInitialized) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          
+          if (userProvider.isAuthenticated) {
+            // Set the user context for TaskProvider
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+              taskProvider.setUserContext(userProvider.userName);
+            });
+            
+            return MainShell(
+              onThemeChanged: _setTheme,
+              currentTheme: _theme,
+            );
+          }
+          
+          return AuthScreen(
+            onThemeChanged: _setTheme,
+            currentTheme: _theme,
+          );
+        },
+      ),
       debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
-class MainShell extends StatefulWidget {
-  final void Function(String)? onThemeChanged;
-  final String? currentTheme;
-  const MainShell({Key? key, this.onThemeChanged, this.currentTheme}) : super(key: key);
-
-  @override
-  State<MainShell> createState() => _MainShellState();
-}
-
-class _MainShellState extends State<MainShell> {
-  int _selectedIndex = 0;
-
-  late final List<Widget> _screens;
-
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      const TasksScreen(),
-      const CalendarScreen(),
-      SettingsScreen(
-        onThemeChanged: widget.onThemeChanged,
-        currentTheme: widget.currentTheme,
-      ),
-    ];
-  }
-
-  void _onNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: FloatingNav(
-        selectedIndex: _selectedIndex,
-        onTap: _onNavTap,
-      ),
     );
   }
 }

@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import 'task_provider.dart';
+import 'user_provider.dart';
+import '../models/task.dart'; // Import the Task model
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({Key? key}) : super(key: key);
@@ -130,13 +132,15 @@ class _TasksScreenState extends State<TasksScreen> {
                                   ? mediumPoints
                                   : largePoints;
                           
-                          taskProvider.addTask({
-                            'title': newTaskName.trim(),
-                            'points': points,
-                            'size': newTaskSize,
-                            'completed': false,
-                            'date': DateTime.now().toIso8601String().split('T')[0],
-                          });
+                          Task newTask = Task(
+                            id: DateTime.now().toIso8601String(), // Unique ID
+                            title: newTaskName.trim(),
+                            points: points,
+                            dueDate: DateTime.now(), // Assuming due date is today for simplicity
+                            size: newTaskSize,
+                          );
+                          
+                          taskProvider.addTask(newTask);
                           
                           Navigator.pop(ctx);
                         },
@@ -155,41 +159,43 @@ class _TasksScreenState extends State<TasksScreen> {
 
   void _shareProgress() {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final tasks = taskProvider.tasks;
     
     final now = DateTime.now();
     final dateString =
         "${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.weekday % 7]}, ${_monthName(now.month)} ${now.day}, ${now.year}";
-    final completedTasks = tasks.where((t) => t['completed']).toList();
-    final pendingTasks = tasks.where((t) => !t['completed']).toList();
+    final completedTasks = tasks.where((t) => t.completed).toList();
+    final pendingTasks = tasks.where((t) => !t.completed).toList();
     final completedList = completedTasks.isEmpty
         ? 'None'
-        : completedTasks.map((t) => '✔ ${t['title']} (${t['points']})').join('\n');
+        : completedTasks.map((t) => '✔ ${t.title} (${t.points})').join('\n');
     final pendingList = pendingTasks.isEmpty
         ? 'None'
-        : pendingTasks.map((t) => '❏ ${t['title']} (${t['points']})').join('\n');
+        : pendingTasks.map((t) => '❏ ${t.title} (${t.points})').join('\n');
     
-    final totalPoints = tasks.fold(0, (sum, t) => sum + (t['points'] as int));
-    final completedPoints = tasks.fold(0, (sum, t) => sum + ((t['completed'] ? t['points'] : 0) as int));
+    final totalPoints = tasks.fold(0, (sum, t) => sum + t.points);
+    final completedPoints = tasks.fold(0, (sum, t) => sum + (t.completed ? t.points : 0));
     final percent = totalPoints == 0 ? 0 : ((completedPoints / totalPoints) * 100).round();
     
+    final userName = userProvider.displayName;
     final shareText =
-        'Fighter App Progress\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
+        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
     Share.share(shareText);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TaskProvider>(
-      builder: (context, taskProvider, child) {
+    return Consumer2<TaskProvider, UserProvider>(
+      builder: (context, taskProvider, userProvider, child) {
         final tasks = taskProvider.tasks;
         
         final now = DateTime.now();
         final dateString =
             "Today, ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.weekday % 7]},\n${_monthName(now.month)} ${now.day}";
         
-        final totalPoints = tasks.fold(0, (sum, t) => sum + (t['points'] as int));
-        final completedPoints = tasks.fold(0, (sum, t) => sum + ((t['completed'] ? t['points'] : 0) as int));
+        final totalPoints = tasks.fold(0, (sum, t) => sum + t.points);
+        final completedPoints = tasks.fold(0, (sum, t) => sum + (t.completed ? t.points : 0));
         final progress = totalPoints == 0 ? 0.0 : min(completedPoints / totalPoints, 1.0);
         final progressColor = progress < 0.25
             ? Colors.grey
@@ -204,6 +210,16 @@ class _TasksScreenState extends State<TasksScreen> {
             ListView(
               padding: const EdgeInsets.fromLTRB(20, 40, 20, 100),
               children: [
+                // Welcome message with user name
+                Text(
+                  userProvider.welcomeMessage,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 // Date header
                 Text(
                   dateString,
@@ -295,7 +311,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 ...List.generate(tasks.length, (i) {
                   final t = tasks[i];
                   return Dismissible(
-                    key: ValueKey(t.hashCode.toString() + t['title']),
+                    key: ValueKey(t.hashCode.toString() + t.title),
                     direction: DismissDirection.endToStart,
                     background: Container(
                       margin: const EdgeInsets.only(bottom: 14),
@@ -313,11 +329,11 @@ class _TasksScreenState extends State<TasksScreen> {
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
-                        color: getTaskColor(t['size']).withOpacity(t['completed'] ? 0.5 : 1),
+                        color: getTaskColor(t.size).withOpacity(t.completed ? 0.5 : 1),
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: getTaskColor(t['size']).withOpacity(0.15),
+                            color: getTaskColor(t.size).withOpacity(0.15),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -330,22 +346,22 @@ class _TasksScreenState extends State<TasksScreen> {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: t['completed'] ? Colors.white : Colors.transparent,
+                              color: t.completed ? Colors.white : Colors.transparent,
                               border: Border.all(color: Colors.white, width: 2),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: t['completed']
+                            child: t.completed
                                 ? const Icon(Icons.check, color: Colors.green, size: 20)
                                 : null,
                           ),
                         ),
                         title: Text(
-                          t['title'],
+                          t.title,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            decoration: t['completed'] ? TextDecoration.lineThrough : null,
+                            decoration: t.completed ? TextDecoration.lineThrough : null,
                           ),
                         ),
                         trailing: Container(
@@ -357,9 +373,9 @@ class _TasksScreenState extends State<TasksScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              '${t['points']}',
+                              '${t.points}',
                               style: TextStyle(
-                                color: getTaskColor(t['size']),
+                                color: getTaskColor(t.size),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),

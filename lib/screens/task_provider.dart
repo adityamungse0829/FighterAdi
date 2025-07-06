@@ -1,36 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../models/task.dart';
 
 class TaskProvider extends ChangeNotifier {
-  List<Map<String, dynamic>> _tasks = [];
+  List<Task> _tasks = [];
+  String? _currentUserContext;
 
-  List<Map<String, dynamic>> get tasks => List.unmodifiable(_tasks);
+  List<Task> get tasks => List.unmodifiable(_tasks);
 
   TaskProvider() {
+    // Will be initialized when user context is set
+  }
+
+  void setUserContext(String? userName) {
+    _currentUserContext = userName;
     loadTasks();
   }
 
+  String get _storageKey {
+    if (_currentUserContext == null) {
+      return 'tasks_guest';
+    }
+    return 'tasks_${_currentUserContext!.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+  }
+
   Future<void> loadTasks() async {
+    if (_currentUserContext == null) return;
+    
     final prefs = await SharedPreferences.getInstance();
-    final tasksJson = prefs.getStringList('tasks') ?? [];
-    _tasks = tasksJson.map((e) => _decodeTaskForPrefs(e)).toList();
+    final tasksJson = prefs.getString(_storageKey);
+    if (tasksJson != null) {
+      final List<dynamic> decodedData = jsonDecode(tasksJson);
+      _tasks = decodedData.map((item) => Task.fromJson(item)).toList();
+    } else {
+      _tasks = [];
+    }
     notifyListeners();
   }
 
   Future<void> saveTasks() async {
+    if (_currentUserContext == null) return;
+    
     final prefs = await SharedPreferences.getInstance();
-    final tasksJson = _tasks.map((e) => _encodeTaskForPrefs(e)).toList();
-    await prefs.setStringList('tasks', tasksJson);
+    final String jsonString = jsonEncode(_tasks.map((task) => task.toJson()).toList());
+    await prefs.setString(_storageKey, jsonString);
   }
 
-  void addTask(Map<String, dynamic> task) {
+  void addTask(Task task) {
     _tasks.add(task);
     saveTasks();
     notifyListeners();
   }
 
-  void updateTask(int index, Map<String, dynamic> task) {
+  void updateTask(int index, Task task) {
     _tasks[index] = task;
     saveTasks();
     notifyListeners();
@@ -43,34 +66,23 @@ class TaskProvider extends ChangeNotifier {
   }
 
   void toggleTask(int index) {
-    _tasks[index]['completed'] = !(_tasks[index]['completed'] as bool);
+    _tasks[index].completed = !_tasks[index].completed;
     saveTasks();
     notifyListeners();
   }
 
   void clearAllTasks() async {
     _tasks.clear();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('tasks');
+    if (_currentUserContext != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
+    }
     notifyListeners();
   }
 
-  Map<String, dynamic> _decodeTaskForPrefs(String s) {
-    final map = Map<String, dynamic>.from(Uri.splitQueryString(s));
-    map['points'] = int.tryParse(map['points'] ?? '0') ?? 0;
-    map['completed'] = map['completed'] == 'true';
-    return map;
-  }
-
-  String _encodeTaskForPrefs(Map<String, dynamic> t) => t.map((k, v) => MapEntry(k, v.toString())).entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&');
-
-  // Methods for file backup/restore
-  List<Map<String, dynamic>> decodeTasksFromFile(String jsonString) {
-    final List<dynamic> decodedList = jsonDecode(jsonString);
-    return decodedList.map((item) => Map<String, dynamic>.from(item)).toList();
-  }
-
-  String encodeTasksToFile(List<Map<String, dynamic>> tasks) {
-    return jsonEncode(tasks);
+  void setTasks(List<Task> newTasks) {
+    _tasks = newTasks;
+    saveTasks();
+    notifyListeners();
   }
 } 
