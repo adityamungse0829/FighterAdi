@@ -27,15 +27,50 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> loadTasks() async {
     if (_currentUserContext == null) return;
-    
+
     final prefs = await SharedPreferences.getInstance();
+    
+    // Get today's date and the last opened date
+    final String lastOpenedKey = 'last_opened_${_currentUserContext!.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+    final String? lastOpenedDateString = prefs.getString(lastOpenedKey);
+    final DateTime now = DateTime.now();
+    final String todayString = "${now.year}-${now.month}-${now.day}";
+
+    // Load tasks from storage
     final tasksJson = prefs.getString(_storageKey);
     if (tasksJson != null) {
       final List<dynamic> decodedData = jsonDecode(tasksJson);
       _tasks = decodedData.map((item) => Task.fromJson(item)).toList();
+
+      // If it's a new day, reset the completion status of all tasks
+      if (lastOpenedDateString != todayString) {
+        // Create a new list to hold the tasks for the new day
+        List<Task> tasksForNewDay = [];
+
+        for (var task in _tasks) {
+          if (task.isRecurring) {
+            // If the task is recurring, reset its completion status
+            task.completed = false;
+            tasksForNewDay.add(task);
+          } else if (!task.completed) {
+            // If the task is a one-time task and not completed, carry it over
+            tasksForNewDay.add(task);
+          }
+          // Completed one-time tasks are automatically removed by not adding them
+        }
+        
+        _tasks = tasksForNewDay;
+        
+        // After processing, save the updated list of tasks
+        await saveTasks();
+      }
     } else {
       _tasks = [];
     }
+
+    // Update the last opened date to today
+    await prefs.setString(lastOpenedKey, todayString);
+
     notifyListeners();
   }
 

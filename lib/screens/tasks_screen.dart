@@ -56,6 +56,7 @@ class _TasksScreenState extends State<TasksScreen> {
   void _showAddTaskModal() {
     String newTaskName = '';
     String newTaskSize = 'small';
+    bool newTaskRecurring = false;
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     
     showModalBottomSheet(
@@ -115,6 +116,17 @@ class _TasksScreenState extends State<TasksScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 18),
+                  SwitchListTile(
+                    title: const Text('Daily Task'),
+                    subtitle: const Text('This task will reset every day.'),
+                    value: newTaskRecurring,
+                    onChanged: (value) {
+                      setModalState(() {
+                        newTaskRecurring = value;
+                      });
+                    },
+                  ),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -139,6 +151,7 @@ class _TasksScreenState extends State<TasksScreen> {
                             points: points,
                             dueDate: DateTime.now(), // Assuming due date is today for simplicity
                             size: newTaskSize,
+                            isRecurring: newTaskRecurring,
                           );
                           
                           taskProvider.addTask(newTask);
