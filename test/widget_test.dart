@@ -7,24 +7,36 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:fighter/main.dart';
+import 'package:fighter/screens/auth_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:fighter/screens/task_provider.dart';
+import 'package:fighter/screens/user_provider.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App smoke test: App launches and shows AuthScreen', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    // The main() function in main.dart wraps the app in MultiProvider.
+    // We need to replicate that setup here for the test to work correctly.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => TaskProvider()),
+          ChangeNotifierProvider(create: (_) => UserProvider()),
+        ],
+        child: const FighterApp(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Wait for widgets to settle, especially after async operations like theme loading.
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // In a default test environment, the user is not authenticated,
+    // so we expect the AuthScreen to be displayed.
+    expect(find.byType(AuthScreen), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify key widgets on the AuthScreen are present.
+    expect(find.text('Sign Up'), findsOneWidget);
+    expect(find.text('Log In'), findsOneWidget);
   });
 }

@@ -1,0 +1,1063 @@
+{
+  "app_name": "Fighter",
+  "version": "1.0.0",
+  "test_suite": {
+    "unit_tests": {
+      "task_model": [
+        {
+          "test_id": "UT_TASK_001",
+          "test_name": "Task creation with required parameters",
+          "description": "Test creating a Task object with all required parameters",
+          "category": "unit",
+          "component": "Task Model",
+          "priority": "high",
+          "steps": [
+            "Create a Task object with id, title, and dueDate",
+            "Verify all properties are set correctly",
+            "Verify default values for optional parameters"
+          ],
+          "expected_result": "Task object created with correct values and defaults",
+          "test_data": {
+            "id": "test_id_123",
+            "title": "Test Task",
+            "dueDate": "2024-01-15T10:00:00.000Z",
+            "completed": false,
+            "points": 0,
+            "size": "small",
+            "isRecurring": false
+          }
+        },
+        {
+          "test_id": "UT_TASK_002",
+          "test_name": "Task toJson serialization",
+          "description": "Test converting Task object to JSON format",
+          "category": "unit",
+          "component": "Task Model",
+          "priority": "high",
+          "steps": [
+            "Create a Task object with all properties set",
+            "Call toJson() method",
+            "Verify JSON structure and values"
+          ],
+          "expected_result": "Valid JSON object with all task properties",
+          "test_data": {
+            "task": {
+              "id": "test_id_123",
+              "title": "Test Task",
+              "dueDate": "2024-01-15T10:00:00.000Z",
+              "completed": true,
+              "points": 5,
+              "size": "large",
+              "isRecurring": true
+            }
+          }
+        },
+        {
+          "test_id": "UT_TASK_003",
+          "test_name": "Task fromJson deserialization",
+          "description": "Test creating Task object from JSON data",
+          "category": "unit",
+          "component": "Task Model",
+          "priority": "high",
+          "steps": [
+            "Create JSON data representing a task",
+            "Call Task.fromJson() method",
+            "Verify Task object properties match JSON data"
+          ],
+          "expected_result": "Task object created with values from JSON",
+          "test_data": {
+            "json_data": {
+              "id": "test_id_123",
+              "title": "Test Task",
+              "dueDate": "2024-01-15T10:00:00.000Z",
+              "completed": true,
+              "points": 5,
+              "size": "large",
+              "isRecurring": true
+            }
+          }
+        },
+        {
+          "test_id": "UT_TASK_004",
+          "test_name": "Task creation with automatic due date",
+          "description": "Test that due date is automatically set to today",
+          "category": "unit",
+          "component": "Task Model",
+          "priority": "medium",
+          "steps": [
+            "Create a Task object without specifying dueDate",
+            "Verify dueDate is automatically set to the current date",
+            "Verify other properties are set correctly"
+          ],
+          "expected_result": "Due date set to today",
+          "test_data": {
+            "id": "test_id_123",
+            "title": "Test Task",
+            "points": 3,
+            "size": "medium",
+            "isRecurring": false
+          }
+        }
+      ],
+      "task_provider": [
+        {
+          "test_id": "UT_TP_001",
+          "test_name": "TaskProvider initialization",
+          "description": "Test TaskProvider initializes with empty task list",
+          "category": "unit",
+          "component": "TaskProvider",
+          "priority": "high",
+          "steps": [
+            "Create new TaskProvider instance",
+            "Verify tasks list is empty",
+            "Verify consistency count is 0"
+          ],
+          "expected_result": "TaskProvider initialized with empty state",
+          "test_data": {}
+        },
+        {
+          "test_id": "UT_TP_002",
+          "test_name": "Add task functionality",
+          "description": "Test adding a new task to the provider",
+          "category": "unit",
+          "component": "TaskProvider",
+          "priority": "high",
+          "steps": [
+            "Create TaskProvider instance",
+            "Create a new Task object",
+            "Call addTask() method",
+            "Verify task is added to the list"
+          ],
+          "expected_result": "Task added successfully to the list",
+          "test_data": {
+            "task": {
+              "id": "test_id_123",
+              "title": "New Task",
+              "dueDate": "2024-01-15T10:00:00.000Z"
+            }
+          }
+        },
+        {
+          "test_id": "UT_TP_003",
+          "test_name": "Toggle task completion",
+          "description": "Test toggling task completion status",
+          "category": "unit",
+          "component": "TaskProvider",
+          "priority": "high",
+          "steps": [
+            "Add a task to TaskProvider",
+            "Call toggleTask() with task index",
+            "Verify task completion status changes",
+            "Verify consistency count updates if first task of day"
+          ],
+          "expected_result": "Task completion status toggled and consistency count updated",
+          "test_data": {
+            "task_index": 0,
+            "initial_completed": false
+          }
+        },
+        {
+          "test_id": "UT_TP_004",
+          "test_name": "Consistency count increment",
+          "description": "Test consistency count increments when first task completed",
+          "category": "unit",
+          "component": "TaskProvider",
+          "priority": "medium",
+          "steps": [
+            "Set up TaskProvider with user context",
+            "Complete first task of the day",
+            "Verify consistency count increments",
+            "Complete additional tasks",
+            "Verify consistency count doesn't increment again"
+          ],
+          "expected_result": "Consistency count increments only for first task of day",
+          "test_data": {
+            "user_context": "test_user",
+            "tasks": [
+              {"title": "Task 1", "completed": false},
+              {"title": "Task 2", "completed": false}
+            ]
+          }
+        },
+        {
+          "test_id": "UT_TP_005",
+          "test_name": "Consistency count reset on missed day",
+          "description": "Test consistency count resets when user misses a day",
+          "category": "unit",
+          "component": "TaskProvider",
+          "priority": "medium",
+          "steps": [
+            "Set up TaskProvider with existing consistency count",
+            "Simulate missing a day (set last update to 2 days ago)",
+            "Load tasks",
+            "Verify consistency count resets to 0"
+          ],
+          "expected_result": "Consistency count resets to 0 when day is missed",
+          "test_data": {
+            "initial_consistency_count": 5,
+            "last_update_days_ago": 2
+          }
+        },
+        {
+          "test_id": "UT_TP_006",
+          "test_name": "Remove task functionality",
+          "description": "Test removing a task from the provider",
+          "category": "unit",
+          "component": "TaskProvider",
+          "priority": "medium",
+          "steps": [
+            "Add multiple tasks to TaskProvider",
+            "Call removeTask() with specific index",
+            "Verify task is removed from the list",
+            "Verify remaining tasks are in correct order"
+          ],
+          "expected_result": "Task removed successfully from the list",
+          "test_data": {
+            "tasks": [
+              {"title": "Task 1"},
+              {"title": "Task 2"},
+              {"title": "Task 3"}
+            ],
+            "remove_index": 1
+          }
+        }
+      ],
+      "user_provider": [
+        {
+          "test_id": "UT_UP_001",
+          "test_name": "UserProvider initialization",
+          "description": "Test UserProvider initializes correctly",
+          "category": "unit",
+          "component": "UserProvider",
+          "priority": "high",
+          "steps": [
+            "Create new UserProvider instance",
+            "Verify initial state properties",
+            "Verify isInitialized becomes true after loading"
+          ],
+          "expected_result": "UserProvider initialized with correct default state",
+          "test_data": {}
+        },
+        {
+          "test_id": "UT_UP_002",
+          "test_name": "Set named user functionality",
+          "description": "Test setting a named user",
+          "category": "unit",
+          "component": "UserProvider",
+          "priority": "high",
+          "steps": [
+            "Create UserProvider instance",
+            "Call setNamedUser() with name",
+            "Verify userName is set",
+            "Verify isGuest is false",
+            "Verify isAuthenticated is true"
+          ],
+          "expected_result": "Named user set successfully",
+          "test_data": {
+            "user_name": "John Doe"
+          }
+        },
+        {
+          "test_id": "UT_UP_003",
+          "test_name": "Set guest user functionality",
+          "description": "Test setting guest user",
+          "category": "unit",
+          "component": "UserProvider",
+          "priority": "high",
+          "steps": [
+            "Create UserProvider instance",
+            "Call setGuestUser()",
+            "Verify userName is null",
+            "Verify isGuest is true",
+            "Verify isAuthenticated is true"
+          ],
+          "expected_result": "Guest user set successfully",
+          "test_data": {}
+        },
+        {
+          "test_id": "UT_UP_004",
+          "test_name": "Display name generation",
+          "description": "Test display name generation for different user types",
+          "category": "unit",
+          "component": "UserProvider",
+          "priority": "medium",
+          "steps": [
+            "Test displayName for named user",
+            "Test displayName for guest user",
+            "Test displayName for null user"
+          ],
+          "expected_result": "Correct display names generated for each user type",
+          "test_data": {
+            "named_user": "John Doe",
+            "guest_user": "Guest",
+            "null_user": "User"
+          }
+        },
+        {
+          "test_id": "UT_UP_005",
+          "test_name": "Welcome message generation",
+          "description": "Test welcome message generation for different user types",
+          "category": "unit",
+          "component": "UserProvider",
+          "priority": "medium",
+          "steps": [
+            "Test welcomeMessage for named user",
+            "Test welcomeMessage for guest user"
+          ],
+          "expected_result": "Correct welcome messages generated for each user type",
+          "test_data": {
+            "named_user": "Welcome, John Doe!",
+            "guest_user": "Welcome, Guest!"
+          }
+        }
+      ]
+    },
+    "widget_tests": {
+      "main_app": [
+        {
+          "test_id": "WT_MAIN_001",
+          "test_name": "App launches successfully",
+          "description": "Test that the main app widget builds without errors",
+          "category": "widget",
+          "component": "Main App",
+          "priority": "high",
+          "steps": [
+            "Build the main app widget",
+            "Verify no build errors occur",
+            "Verify basic app structure is present"
+          ],
+          "expected_result": "App launches and displays initial screen",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_MAIN_002",
+          "test_name": "Theme switching functionality",
+          "description": "Test theme switching between default, dark, and mint themes",
+          "category": "widget",
+          "component": "Main App",
+          "priority": "medium",
+          "steps": [
+            "Build app with default theme",
+            "Switch to dark theme",
+            "Switch to mint theme",
+            "Verify theme changes are applied"
+          ],
+          "expected_result": "Themes switch correctly and are applied throughout app",
+          "test_data": {
+            "themes": ["default", "dark", "mint"]
+          }
+        }
+      ],
+      "auth_screen": [
+        {
+          "test_id": "WT_AUTH_001",
+          "test_name": "Auth screen displays correctly",
+          "description": "Test that AuthScreen displays all required elements",
+          "category": "widget",
+          "component": "AuthScreen",
+          "priority": "high",
+          "steps": [
+            "Build AuthScreen widget",
+            "Verify app logo/title is displayed",
+            "Verify welcome message is present",
+            "Verify name input field is present",
+            "Verify Sign Up button is present",
+            "Verify Continue as Guest button is present"
+          ],
+          "expected_result": "All auth screen elements are displayed correctly",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_AUTH_002",
+          "test_name": "Named user authentication flow",
+          "description": "Test the complete flow of authenticating as a named user",
+          "category": "widget",
+          "component": "AuthScreen",
+          "priority": "high",
+          "steps": [
+            "Enter name in text field",
+            "Tap Sign Up button",
+            "Verify navigation to main shell",
+            "Verify user context is set correctly"
+          ],
+          "expected_result": "User authenticated and navigated to main app",
+          "test_data": {
+            "user_name": "Test User"
+          }
+        },
+        {
+          "test_id": "WT_AUTH_003",
+          "test_name": "Guest user authentication flow",
+          "description": "Test the complete flow of continuing as guest",
+          "category": "widget",
+          "component": "AuthScreen",
+          "priority": "high",
+          "steps": [
+            "Tap Continue as Guest button",
+            "Verify navigation to main shell",
+            "Verify guest user context is set"
+          ],
+          "expected_result": "Guest user authenticated and navigated to main app",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_AUTH_004",
+          "test_name": "Empty name validation",
+          "description": "Test validation when trying to sign up with empty name",
+          "category": "widget",
+          "component": "AuthScreen",
+          "priority": "medium",
+          "steps": [
+            "Leave name field empty",
+            "Tap Sign Up button",
+            "Verify error message is displayed",
+            "Verify navigation doesn't occur"
+          ],
+          "expected_result": "Error message shown and navigation prevented",
+          "test_data": {
+            "user_name": ""
+          }
+        }
+      ],
+      "tasks_screen": [
+        {
+          "test_id": "WT_TASKS_001",
+          "test_name": "Tasks screen displays correctly",
+          "description": "Test that TasksScreen displays all required elements",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "high",
+          "steps": [
+            "Build TasksScreen widget",
+            "Verify welcome message is displayed",
+            "Verify date header is present",
+            "Verify progress card is displayed",
+            "Verify tasks list area is present",
+            "Verify add task button is present",
+            "Verify share button is present"
+          ],
+          "expected_result": "All tasks screen elements are displayed correctly",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_TASKS_002",
+          "test_name": "Add task dialog functionality",
+          "description": "Test the add task dialog and form",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "high",
+          "steps": [
+            "Tap add task button",
+            "Verify dialog opens",
+            "Verify task name input field is present",
+            "Verify task size selection chips are present",
+            "Verify daily task toggle is present",
+            "Verify Save and Cancel buttons are present",
+            "Verify NO description field is present"
+          ],
+          "expected_result": "Add task dialog opens with all required elements (no description field)",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_TASKS_003",
+          "test_name": "Create new task",
+          "description": "Test creating a new task through the dialog",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "high",
+          "steps": [
+            "Open add task dialog",
+            "Enter task name",
+            "Select task size",
+            "Toggle daily task if needed",
+            "Tap Save button",
+            "Verify task appears in list",
+            "Verify dialog closes"
+          ],
+          "expected_result": "New task created and added to list",
+          "test_data": {
+            "task_name": "Test Task",
+            "task_size": "medium",
+            "is_daily": false
+          }
+        },
+        {
+          "test_id": "WT_TASKS_004",
+          "test_name": "Task completion toggle",
+          "description": "Test toggling task completion status",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "high",
+          "steps": [
+            "Create a task",
+            "Tap task checkbox",
+            "Verify task completion status changes",
+            "Verify visual indicators update",
+            "Verify consistency count updates if first task"
+          ],
+          "expected_result": "Task completion toggled and UI updated",
+          "test_data": {
+            "task_name": "Test Task"
+          }
+        },
+        {
+          "test_id": "WT_TASKS_005",
+          "test_name": "Progress calculation and display",
+          "description": "Test progress bar and percentage calculation",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "medium",
+          "steps": [
+            "Create multiple tasks with different point values",
+            "Complete some tasks",
+            "Verify progress bar updates correctly",
+            "Verify percentage calculation is accurate",
+            "Verify progress color changes based on completion"
+          ],
+          "expected_result": "Progress accurately calculated and displayed",
+          "test_data": {
+            "tasks": [
+              {"name": "Task 1", "points": 1, "completed": true},
+              {"name": "Task 2", "points": 3, "completed": false},
+              {"name": "Task 3", "points": 5, "completed": true}
+            ]
+          }
+        },
+        {
+          "test_id": "WT_TASKS_006",
+          "test_name": "Consistency count display",
+          "description": "Test consistency count display in progress card",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "medium",
+          "steps": [
+            "Set up user with existing consistency count",
+            "Verify fire icon is displayed",
+            "Verify streak count is shown correctly",
+            "Verify pluralization works (Day vs Days)"
+          ],
+          "expected_result": "Consistency count displayed correctly with proper formatting",
+          "test_data": {
+            "consistency_count": 5
+          }
+        },
+        {
+          "test_id": "WT_TASKS_007",
+          "test_name": "Task deletion by swipe",
+          "description": "Test deleting tasks by swiping",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "medium",
+          "steps": [
+            "Create multiple tasks",
+            "Swipe a task from right to left",
+            "Verify delete animation appears",
+            "Complete swipe to delete",
+            "Verify task is removed from list"
+          ],
+          "expected_result": "Task deleted successfully by swipe gesture",
+          "test_data": {
+            "tasks": [
+              {"name": "Task 1"},
+              {"name": "Task 2"},
+              {"name": "Task 3"}
+            ]
+          }
+        },
+        {
+          "test_id": "WT_TASKS_008",
+          "test_name": "Share progress functionality",
+          "description": "Test sharing progress functionality",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "low",
+          "steps": [
+            "Create and complete some tasks",
+            "Tap share button",
+            "Verify share dialog/sheet appears",
+            "Verify share content includes progress information"
+          ],
+          "expected_result": "Share functionality works and includes correct data",
+          "test_data": {
+            "tasks": [
+              {"name": "Task 1", "points": 1, "completed": true},
+              {"name": "Task 2", "points": 3, "completed": false}
+            ]
+          }
+        },
+        {
+          "test_id": "WT_TASKS_010",
+          "test_name": "Empty task list display",
+          "description": "Test that the tasks screen displays a helpful message or placeholder when the task list is empty.",
+          "category": "widget",
+          "component": "TasksScreen",
+          "priority": "low",
+          "steps": [
+            "Navigate to the TasksScreen when no tasks have been added.",
+            "Verify that a message like 'No tasks yet. Add one to get started!' is displayed.",
+            "Verify that the progress card shows a default or zero state."
+          ],
+          "expected_result": "The UI correctly reflects the empty state and guides the user to add a new task.",
+          "test_data": {}
+        }
+      ],
+      "calendar_screen": [
+        {
+          "test_id": "WT_CAL_001",
+          "test_name": "Calendar screen displays correctly",
+          "description": "Test that CalendarScreen displays all required elements",
+          "category": "widget",
+          "component": "CalendarScreen",
+          "priority": "high",
+          "steps": [
+            "Build CalendarScreen widget",
+            "Verify month/year header is displayed",
+            "Verify navigation arrows are present",
+            "Verify calendar grid is displayed",
+            "Verify today's date is highlighted"
+          ],
+          "expected_result": "All calendar screen elements are displayed correctly",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_CAL_002",
+          "test_name": "Calendar navigation",
+          "description": "Test month navigation functionality",
+          "category": "widget",
+          "component": "CalendarScreen",
+          "priority": "medium",
+          "steps": [
+            "Note current month",
+            "Tap next month arrow",
+            "Verify month changes correctly",
+            "Tap previous month arrow",
+            "Verify month changes back"
+          ],
+          "expected_result": "Calendar navigation works correctly",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_CAL_003",
+          "test_name": "Day color coding",
+          "description": "Test day color coding based on task completion",
+          "category": "widget",
+          "component": "CalendarScreen",
+          "priority": "medium",
+          "steps": [
+            "Create tasks for specific dates",
+            "Complete some tasks",
+            "Verify days with tasks are colored",
+            "Verify color intensity matches completion percentage"
+          ],
+          "expected_result": "Days are colored correctly based on task completion",
+          "test_data": {
+            "tasks": [
+              {"date": "2024-01-15", "completion": 0.8},
+              {"date": "2024-01-16", "completion": 0.3},
+              {"date": "2024-01-17", "completion": 0.0}
+            ]
+          }
+        },
+        {
+          "test_id": "WT_CAL_004",
+          "test_name": "Day tap functionality",
+          "description": "Test tapping on calendar days",
+          "category": "widget",
+          "component": "CalendarScreen",
+          "priority": "medium",
+          "steps": [
+            "Tap on a day with tasks",
+            "Verify task details dialog appears",
+            "Verify task list is displayed correctly",
+            "Verify completion status is shown"
+          ],
+          "expected_result": "Day tap shows task details correctly",
+          "test_data": {
+            "selected_date": "2024-01-15",
+            "tasks": [
+              {"name": "Task 1", "completed": true, "points": 3},
+              {"name": "Task 2", "completed": false, "points": 5}
+            ]
+          }
+        }
+      ],
+      "settings_screen": [
+        {
+          "test_id": "WT_SETTINGS_001",
+          "test_name": "Settings screen displays correctly",
+          "description": "Test that SettingsScreen displays all required elements",
+          "category": "widget",
+          "component": "SettingsScreen",
+          "priority": "high",
+          "steps": [
+            "Build SettingsScreen widget",
+            "Verify user information section is present",
+            "Verify theme selection is available",
+            "Verify points configuration is present",
+            "Verify data management options are available"
+          ],
+          "expected_result": "All settings screen elements are displayed correctly",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_SETTINGS_002",
+          "test_name": "Theme selection functionality",
+          "description": "Test theme selection and application",
+          "category": "widget",
+          "component": "SettingsScreen",
+          "priority": "medium",
+          "steps": [
+            "Select different theme options",
+            "Verify theme changes are applied",
+            "Verify theme selection is saved",
+            "Verify app restarts with selected theme"
+          ],
+          "expected_result": "Theme selection works and persists across app restarts",
+          "test_data": {
+            "themes": ["default", "dark", "mint"]
+          }
+        },
+        {
+          "test_id": "WT_SETTINGS_003",
+          "test_name": "Points configuration",
+          "description": "Test configuring point values for task sizes",
+          "category": "widget",
+          "component": "SettingsScreen",
+          "priority": "medium",
+          "steps": [
+            "Modify point values for small, medium, large tasks",
+            "Save configuration",
+            "Create new tasks",
+            "Verify new point values are applied"
+          ],
+          "expected_result": "Point configuration is saved and applied to new tasks",
+          "test_data": {
+            "small_points": 2,
+            "medium_points": 4,
+            "large_points": 7
+          }
+        },
+        {
+          "test_id": "WT_SETTINGS_004",
+          "test_name": "Data export functionality",
+          "description": "Test exporting user data",
+          "category": "widget",
+          "component": "SettingsScreen",
+          "priority": "low",
+          "steps": [
+            "Create some tasks and user data",
+            "Tap export data button",
+            "Verify data export process",
+            "Verify exported file contains correct data"
+          ],
+          "expected_result": "Data exported successfully with correct format",
+          "test_data": {
+            "export_format": "JSON"
+          }
+        },
+        {
+          "test_id": "WT_SETTINGS_005",
+          "test_name": "Clear all data functionality",
+          "description": "Test clearing all user data",
+          "category": "widget",
+          "component": "SettingsScreen",
+          "priority": "high",
+          "steps": [
+            "Create tasks and user data",
+            "Tap clear all data button",
+            "Confirm deletion",
+            "Verify all data is cleared",
+            "Verify user is returned to auth screen"
+          ],
+          "expected_result": "All data cleared and user returned to auth screen",
+          "test_data": {}
+        },
+        {
+          "test_id": "WT_SETTINGS_006",
+          "test_name": "Data import functionality",
+          "description": "Test importing user data",
+          "category": "widget",
+          "component": "SettingsScreen",
+          "priority": "low",
+          "steps": [
+            "Tap import data button",
+            "Select a valid data file",
+            "Verify data is imported correctly",
+            "Verify tasks and settings are restored"
+          ],
+          "expected_result": "Data imported successfully and app state restored",
+          "test_data": {
+            "import_format": "JSON"
+          }
+        },
+        {
+          "test_id": "WT_SETTINGS_007",
+          "test_name": "Data import with invalid file",
+          "description": "Test how the app handles an attempt to import a corrupted or invalid data file.",
+          "category": "widget",
+          "component": "SettingsScreen",
+          "priority": "medium",
+          "steps": [
+            "Navigate to the settings screen and tap the import data button.",
+            "Select an invalid or corrupted JSON file.",
+            "Verify that an appropriate error message is displayed to the user.",
+            "Verify that the app's existing data remains unchanged."
+          ],
+          "expected_result": "An error message is shown, and the app's state is not affected by the invalid import attempt.",
+          "test_data": {
+            "invalid_file": "corrupted_data.json"
+          }
+        }
+      ],
+      "floating_navigation": [
+        {
+          "test_id": "WT_NAV_001",
+          "test_name": "Floating navigation displays correctly",
+          "description": "Test that FloatingNav displays all navigation items",
+          "category": "widget",
+          "component": "FloatingNav",
+          "priority": "high",
+          "steps": [
+            "Build FloatingNav widget",
+            "Verify Tasks icon is present",
+            "Verify Calendar icon is present",
+            "Verify Settings icon is present",
+            "Verify active state is highlighted"
+          ],
+          "expected_result": "All navigation items displayed with correct active state",
+          "test_data": {
+            "selected_index": 0
+          }
+        },
+        {
+          "test_id": "WT_NAV_002",
+          "test_name": "Navigation between screens",
+          "description": "Test navigation between different screens",
+          "category": "widget",
+          "component": "FloatingNav",
+          "priority": "high",
+          "steps": [
+            "Start on Tasks screen",
+            "Tap Calendar icon",
+            "Verify Calendar screen is displayed",
+            "Tap Settings icon",
+            "Verify Settings screen is displayed",
+            "Tap Tasks icon",
+            "Verify Tasks screen is displayed"
+          ],
+          "expected_result": "Navigation works correctly between all screens",
+          "test_data": {}
+        }
+      ]
+    },
+    "integration_tests": [
+      {
+        "test_id": "IT_001",
+        "test_name": "Complete user authentication flow",
+        "description": "Test complete flow from app launch to authenticated user",
+        "category": "integration",
+        "component": "Full App",
+        "priority": "high",
+        "steps": [
+          "Launch app",
+          "Verify auth screen is displayed",
+          "Enter user name",
+          "Tap Sign Up",
+          "Verify navigation to main app",
+          "Verify user context is set",
+          "Verify tasks screen is displayed"
+        ],
+        "expected_result": "Complete authentication flow works correctly",
+        "test_data": {
+          "user_name": "Integration Test User"
+        }
+      },
+      {
+        "test_id": "IT_002",
+        "test_name": "Complete task management workflow",
+        "description": "Test complete workflow of creating, completing, and managing tasks",
+        "category": "integration",
+        "component": "Full App",
+        "priority": "high",
+        "steps": [
+          "Authenticate as user",
+          "Create multiple tasks with different sizes",
+          "Complete some tasks",
+          "Verify progress updates",
+          "Verify consistency count updates",
+          "Navigate to calendar",
+          "Verify task completion is reflected",
+          "Return to tasks and delete a task",
+          "Verify task is removed"
+        ],
+        "expected_result": "Complete task management workflow functions correctly",
+        "test_data": {
+          "tasks": [
+            {"name": "Small Task", "size": "small"},
+            {"name": "Medium Task", "size": "medium"},
+            {"name": "Large Task", "size": "large"}
+          ]
+        }
+      },
+      {
+        "test_id": "IT_003",
+        "test_name": "Data persistence across app restarts",
+        "description": "Test that user data persists correctly across app restarts",
+        "category": "integration",
+        "component": "Full App",
+        "priority": "high",
+        "steps": [
+          "Create user account",
+          "Create and complete tasks",
+          "Set custom point values",
+          "Change theme",
+          "Restart app",
+          "Verify user is still authenticated",
+          "Verify tasks are preserved",
+          "Verify settings are preserved",
+          "Verify consistency count is preserved"
+        ],
+        "expected_result": "All user data persists correctly across app restarts",
+        "test_data": {
+          "user_name": "Persistence Test User",
+          "tasks": [
+            {"name": "Persistent Task 1", "completed": true},
+            {"name": "Persistent Task 2", "completed": false}
+          ],
+          "settings": {
+            "theme": "dark",
+            "small_points": 2,
+            "medium_points": 4,
+            "large_points": 7
+          }
+        }
+      },
+      {
+        "test_id": "IT_004",
+        "test_name": "Consistency streak functionality",
+        "description": "Test consistency streak tracking across multiple days",
+        "category": "integration",
+        "component": "Full App",
+        "priority": "medium",
+        "steps": [
+          "Authenticate as user",
+          "Complete first task of day",
+          "Verify consistency count increments",
+          "Complete additional tasks",
+          "Verify consistency count doesn't change",
+          "Simulate next day",
+          "Complete first task of new day",
+          "Verify consistency count increments",
+          "Simulate missing a day",
+          "Verify consistency count resets"
+        ],
+        "expected_result": "Consistency streak tracking works correctly across days",
+        "test_data": {
+          "user_name": "Streak Test User",
+          "daily_tasks": [
+            {"day": 1, "tasks": ["Task 1", "Task 2"]},
+            {"day": 2, "tasks": ["Task 3", "Task 4"]},
+            {"day": 3, "tasks": []},
+            {"day": 4, "tasks": ["Task 5"]}
+          ]
+        }
+      },
+      {
+        "test_id": "IT_005",
+        "test_name": "Theme switching and persistence",
+        "description": "Test theme switching and persistence across app restarts",
+        "category": "integration",
+        "component": "Full App",
+        "priority": "medium",
+        "steps": [
+          "Launch app with default theme",
+          "Navigate to settings",
+          "Switch to dark theme",
+          "Verify theme is applied",
+          "Restart app",
+          "Verify dark theme is still active",
+          "Switch to mint theme",
+          "Verify theme is applied",
+          "Restart app",
+          "Verify mint theme is still active"
+        ],
+        "expected_result": "Theme switching works and persists across restarts",
+        "test_data": {
+          "themes": ["default", "dark", "mint"]
+        }
+      },
+      {
+        "test_id": "IT_006",
+        "test_name": "Guest user functionality",
+        "description": "Test complete guest user experience",
+        "category": "integration",
+        "component": "Full App",
+        "priority": "medium",
+        "steps": [
+          "Launch app",
+          "Tap Continue as Guest",
+          "Verify navigation to main app",
+          "Create and manage tasks",
+          "Verify guest user context is maintained",
+          "Restart app",
+          "Verify guest user is still active",
+          "Verify guest data is preserved"
+        ],
+        "expected_result": "Guest user functionality works correctly",
+        "test_data": {
+          "guest_tasks": [
+            {"name": "Guest Task 1", "size": "small"},
+            {"name": "Guest Task 2", "size": "medium"}
+          ]
+        }
+      },
+      {
+        "test_id": "IT_007",
+        "test_name": "Data export and import",
+        "description": "Test data export and import functionality",
+        "category": "integration",
+        "component": "Full App",
+        "priority": "low",
+        "steps": [
+          "Create user with tasks and settings",
+          "Export user data",
+          "Clear all data",
+          "Verify data is cleared",
+          "Import exported data",
+          "Verify all data is restored correctly"
+        ],
+        "expected_result": "Data export and import works correctly",
+        "test_data": {
+          "user_data": {
+            "user_name": "Export Test User",
+            "tasks": [
+              {"name": "Exported Task 1", "completed": true, "points": 3},
+              {"name": "Exported Task 2", "completed": false, "points": 5}
+            ],
+            "settings": {
+              "theme": "dark",
+              "consistency_count": 7
+            }
+          }
+        }
+      }
+    ]
+  },
+  "test_environment": {
+    "platforms": ["Android", "iOS", "Web"],
+    "flutter_version": "3.8.1",
+    "dependencies": [
+      "flutter",
+      "provider",
+      "shared_preferences",
+      "share_plus",
+      "path_provider"
+    ]
+  },
+  "test_execution": {
+    "unit_tests": "flutter test test/unit/",
+    "widget_tests": "flutter test test/widget/",
+    "integration_tests": "flutter test test/integration/",
+    "all_tests": "flutter test"
+  }
+}

@@ -1,7 +1,6 @@
 class Task {
   String id;
   String title;
-  String description;
   DateTime dueDate;
   bool completed;
   int points;
@@ -11,7 +10,6 @@ class Task {
   Task({
     required this.id,
     required this.title,
-    this.description = '',
     required this.dueDate,
     this.completed = false,
     this.points = 0,
@@ -24,7 +22,6 @@ class Task {
     return {
       'id': id,
       'title': title,
-      'description': description,
       'dueDate': dueDate.toIso8601String(),
       'completed': completed,
       'points': points,
@@ -38,7 +35,6 @@ class Task {
     return Task(
       id: json['id'],
       title: json['title'],
-      description: json['description'] ?? '',
       dueDate: DateTime.parse(json['dueDate']),
       completed: json['completed'] ?? false,
       points: json['points'] ?? 0,

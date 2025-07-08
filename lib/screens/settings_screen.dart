@@ -418,7 +418,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // App version
             const Center(
               child: Text(
-                'App Version: 1.0.0',
+                'App Version: 1.0.5',
                 style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
             ),

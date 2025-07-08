@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'dart:async';
+
 class UserProvider extends ChangeNotifier {
   String? _userName;
   bool _isGuest = false;
   bool _isInitialized = false;
+  final Completer<void> _initCompleter = Completer<void>();
 
   String? get userName => _userName;
   bool get isGuest => _isGuest;
   bool get isInitialized => _isInitialized;
   bool get isAuthenticated => _isInitialized && (_userName != null || _isGuest);
+  Future<void> get initializationFuture => _initCompleter.future;
 
-  UserProvider() {
-    _loadUserData();
+  UserProvider({SharedPreferences? prefs}) {
+    _loadUserData(prefs);
   }
 
   Future<void> _loadUserData() async {
@@ -20,6 +24,7 @@ class UserProvider extends ChangeNotifier {
     _userName = prefs.getString('userName');
     _isGuest = prefs.getBool('isGuest') ?? false;
     _isInitialized = true;
+    _initCompleter.complete();
     notifyListeners();
   }
 

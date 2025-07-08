@@ -79,44 +79,48 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Allows the modal to take full screen height
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${_monthName(_focusedMonth.month)} $dayNum, ${_focusedMonth.year}',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              if (tasksForDay.isEmpty)
-                const Text('No tasks for this day.')
-              else
-                Expanded(
-                  child: ListView(
-                    children: tasksForDay.map((task) => ListTile(
-                      leading: Icon(
-                        task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: task.completed ? Colors.green : Colors.grey,
-                      ),
-                      title: Text(
-                        task.title,
-                        style: TextStyle(
-                          decoration: task.completed ? TextDecoration.lineThrough : null,
-                        ),
-                      ),
-                      trailing: Text(
-                        '${task.points} pts',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    )).toList(),
-                  ),
+        return FractionallySizedBox(
+          heightFactor: 0.7, // Take 70% of the screen height
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_monthName(_focusedMonth.month)} $dayNum, ${_focusedMonth.year}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-            ],
+                const SizedBox(height: 16),
+                if (tasksForDay.isEmpty)
+                  const Text('No tasks for this day.')
+                else
+                  Expanded(
+                    child: ListView(
+                      children: tasksForDay.map((task) => ListTile(
+                        leading: Icon(
+                          task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: task.completed ? Colors.green : Colors.grey,
+                        ),
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            decoration: task.completed ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        trailing: Text(
+                          '${task.points} pts',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },
