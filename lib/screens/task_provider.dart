@@ -55,25 +55,13 @@ class TaskProvider extends ChangeNotifier {
       final List<dynamic> decodedData = jsonDecode(tasksJson);
       _tasks = decodedData.map((item) => Task.fromJson(item)).toList();
 
-      // If it's a new day, reset the completion status of all tasks
+      // If it's a new day, reset the completion status of recurring tasks only
       if (lastOpenedDateString != todayString) {
-        // Create a new list to hold the tasks for the new day
-        List<Task> tasksForNewDay = [];
-
         for (var task in _tasks) {
           if (task.isRecurring) {
-            // If the task is recurring, reset its completion status
             task.completed = false;
-            tasksForNewDay.add(task);
-          } else if (!task.completed) {
-            // If the task is a one-time task and not completed, carry it over
-            tasksForNewDay.add(task);
           }
-          // Completed one-time tasks are automatically removed by not adding them
         }
-        
-        _tasks = tasksForNewDay;
-        
         // After processing, save the updated list of tasks
         await saveTasks();
       }

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'task_provider.dart';
 import 'user_provider.dart';
 import 'auth_screen.dart';
-import '../main.dart';
+// Removed circular import of main.dart
 import 'dart:convert'; // For JSON encoding/decoding
 import 'dart:io'; // For File operations
 import 'package:path_provider/path_provider.dart'; // For getting document directory

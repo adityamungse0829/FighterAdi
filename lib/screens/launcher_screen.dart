@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
+import '../widgets/main_shell.dart';
 
 class LauncherScreen extends StatelessWidget {
   final void Function(String)? onThemeChanged;

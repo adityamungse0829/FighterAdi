@@ -100,23 +100,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   const Text('No tasks for this day.')
                 else
                   Expanded(
-                    child: ListView(
-                      children: tasksForDay.map((task) => ListTile(
-                        leading: Icon(
-                          task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
-                          color: task.completed ? Colors.green : Colors.grey,
-                        ),
-                        title: Text(
-                          task.title,
-                          style: TextStyle(
-                            decoration: task.completed ? TextDecoration.lineThrough : null,
+                    child: ListView.builder(
+                      itemCount: tasksForDay.length,
+                      itemBuilder: (context, idx) {
+                        final task = tasksForDay[idx];
+                        return ListTile(
+                          leading: Icon(
+                            task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                            color: task.completed ? Colors.green : Colors.grey,
                           ),
-                        ),
-                        trailing: Text(
-                          '${task.points} pts',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      )).toList(),
+                          title: Text(
+                            task.title,
+                            style: TextStyle(
+                              decoration: task.completed ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                          trailing: Text(
+                            '${task.points} pts',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        );
+                      },
                     ),
                   ),
               ],

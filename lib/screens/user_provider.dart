@@ -16,16 +16,28 @@ class UserProvider extends ChangeNotifier {
   Future<void> get initializationFuture => _initCompleter.future;
 
   UserProvider({SharedPreferences? prefs}) {
-    _loadUserData(prefs);
+    _loadUserData().catchError((error) {
+      print('Error loading user data: $error');
+      _isInitialized = true;
+      _initCompleter.complete();
+      notifyListeners();
+    });
   }
 
   Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    _userName = prefs.getString('userName');
-    _isGuest = prefs.getBool('isGuest') ?? false;
-    _isInitialized = true;
-    _initCompleter.complete();
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _userName = prefs.getString('userName');
+      _isGuest = prefs.getBool('isGuest') ?? false;
+      _isInitialized = true;
+      _initCompleter.complete();
+      notifyListeners();
+    } catch (error) {
+      print('Error in _loadUserData: $error');
+      _isInitialized = true;
+      _initCompleter.complete();
+      notifyListeners();
+    }
   }
 
   Future<void> setNamedUser(String name) async {

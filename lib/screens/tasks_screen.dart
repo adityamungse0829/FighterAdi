@@ -354,100 +354,223 @@ class _TasksScreenState extends State<TasksScreen> {
                     onDismissed: (_) {
                       taskProvider.removeTask(i);
                     },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: getTaskColor(t.size).withOpacity(t.completed ? 0.5 : 1),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: getTaskColor(t.size).withOpacity(0.15),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        leading: GestureDetector(
-                          onTap: () => taskProvider.toggleTask(i),
+                    child: Builder(
+                      builder: (context) {
+                        return GestureDetector(
+                          onLongPress: () {
+                            final editTaskNameController = TextEditingController(text: t.title);
+                            String editTaskSize = t.size;
+                            bool editTaskRecurring = t.isRecurring;
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                              ),
+                              builder: (ctx) {
+                                return StatefulBuilder(
+                                  builder: (context, setModalState) {
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                        left: 24,
+                                        right: 24,
+                                        top: 24,
+                                        bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Edit Task',
+                                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 18),
+                                          TextField(
+                                            autofocus: true,
+                                            controller: editTaskNameController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Task Name',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 18),
+                                          const Text('Task Size', style: TextStyle(fontWeight: FontWeight.w600)),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              ChoiceChip(
+                                                label: const Text('Small'),
+                                                selected: editTaskSize == 'small',
+                                                onSelected: (_) => setModalState(() => editTaskSize = 'small'),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              ChoiceChip(
+                                                label: const Text('Medium'),
+                                                selected: editTaskSize == 'medium',
+                                                onSelected: (_) => setModalState(() => editTaskSize = 'medium'),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              ChoiceChip(
+                                                label: const Text('Large'),
+                                                selected: editTaskSize == 'large',
+                                                onSelected: (_) => setModalState(() => editTaskSize = 'large'),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 18),
+                                          SwitchListTile(
+                                            title: const Text('Daily Task'),
+                                            subtitle: const Text('This task will reset every day.'),
+                                            value: editTaskRecurring,
+                                            onChanged: (value) {
+                                              setModalState(() {
+                                                editTaskRecurring = value;
+                                              });
+                                            },
+                                          ),
+                                          const SizedBox(height: 24),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  editTaskNameController.dispose();
+                                                  Navigator.pop(ctx);
+                                                },
+                                                child: const Text('Cancel'),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  if (editTaskNameController.text.trim().isEmpty) return;
+                                                  int points = editTaskSize == 'small'
+                                                      ? smallPoints
+                                                      : editTaskSize == 'medium'
+                                                          ? mediumPoints
+                                                          : largePoints;
+                                                  Task updatedTask = Task(
+                                                    id: t.id,
+                                                    title: editTaskNameController.text.trim(),
+                                                    points: points,
+                                                    dueDate: t.dueDate,
+                                                    size: editTaskSize,
+                                                    isRecurring: editTaskRecurring,
+                                                    completed: t.completed,
+                                                  );
+                                                  taskProvider.updateTask(i, updatedTask);
+                                                  editTaskNameController.dispose();
+                                                  Navigator.pop(ctx);
+                                                },
+                                                child: const Text('Save'),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
                           child: Container(
-                            width: 28,
-                            height: 28,
+                            margin: const EdgeInsets.only(bottom: 14),
                             decoration: BoxDecoration(
-                              color: t.completed ? Colors.white : Colors.transparent,
-                              border: Border.all(color: Colors.white, width: 2),
-                              borderRadius: BorderRadius.circular(6),
+                              color: getTaskColor(t.size).withOpacity(t.completed ? 0.5 : 1),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: getTaskColor(t.size).withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            child: t.completed
-                                ? const Icon(Icons.check, color: Colors.green, size: 20)
-                                : null,
-                          ),
-                        ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                t.title,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  decoration: t.completed ? TextDecoration.lineThrough : null,
+                            child: ListTile(
+                              leading: GestureDetector(
+                                onTap: () => taskProvider.toggleTask(i),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: t.completed ? Colors.white : Colors.transparent,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: t.completed
+                                      ? const Icon(Icons.check, color: Colors.green, size: 20)
+                                      : null,
                                 ),
                               ),
-                            ),
-                            if (t.isRecurring) ...[
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.repeat,
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      t.title,
+                                      style: TextStyle(
                                         color: Colors.white,
-                                        size: 14,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        decoration: t.completed ? TextDecoration.lineThrough : null,
                                       ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        'Daily',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  if (t.isRecurring) ...[
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.repeat,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              'Daily',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              trailing: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${t.points}',
+                                    style: TextStyle(
+                                      color: getTaskColor(t.size),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ],
-                          ],
-                        ),
-                        trailing: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${t.points}',
-                              style: TextStyle(
-                                color: getTaskColor(t.size),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   );
                 }),
