@@ -82,17 +82,29 @@ class TaskProvider extends ChangeNotifier {
       
       // Only reset if it's actually a new day
       if (lastOpenedDateString != todayString) {
-        print('🔄 New day detected, resetting recurring tasks');
-        int resetCount = 0;
+        print('🔄 New day detected, processing tasks at midnight');
         
+        // Reset completion status of recurring tasks
+        int resetCount = 0;
         for (var task in _tasks) {
           if (task.isRecurring) {
             task.completed = false;
             resetCount++;
           }
         }
-        
         print('🔄 Reset $resetCount recurring tasks');
+        
+        // Remove non-daily tasks at midnight
+        int removedCount = 0;
+        _tasks.removeWhere((task) {
+          if (!task.isRecurring) {
+            removedCount++;
+            print('🗑️ Removing non-daily task: ${task.title}');
+            return true; // Remove this task
+          }
+          return false; // Keep this task
+        });
+        print('🗑️ Removed $removedCount non-daily tasks at midnight');
         
         // Update the last opened date
         await prefs.setString(lastOpenedKey, todayString);
@@ -100,10 +112,10 @@ class TaskProvider extends ChangeNotifier {
         // Save the updated tasks
         await _saveTasksInternal();
       } else {
-        print('✅ Same day, no need to reset tasks');
+        print('✅ Same day, no need to process tasks');
       }
     } catch (e) {
-      print('❌ Error checking recurring tasks: $e');
+      print('❌ Error processing tasks: $e');
     }
   }
 
