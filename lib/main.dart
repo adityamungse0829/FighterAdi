@@ -28,14 +28,46 @@ class FighterApp extends StatefulWidget {
   State<FighterApp> createState() => _FighterAppState();
 }
 
-class _FighterAppState extends State<FighterApp> {
+class _FighterAppState extends State<FighterApp> with WidgetsBindingObserver {
   String _theme = 'default';
   bool _isThemeLoaded = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTheme();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Save tasks when app goes to background or is closed
+    if (state == AppLifecycleState.paused || 
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      // Save tasks immediately when app goes to background
+      Future.delayed(const Duration(milliseconds: 50), () {
+        try {
+          final context = navigatorKey.currentContext;
+          if (context != null) {
+            final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+            taskProvider.forceSaveTasks();
+            print('Tasks saved on app lifecycle change: $state');
+          }
+        } catch (e) {
+          // Handle error gracefully
+          print('Error saving tasks on app lifecycle change: $e');
+        }
+      });
+    }
   }
 
   Future<void> _loadTheme() async {

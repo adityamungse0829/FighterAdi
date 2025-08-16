@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'task_provider.dart';
 import 'user_provider.dart';
 import '../models/task.dart'; // Import the Task model
+import '../main.dart'; // Import for navigatorKey
+import 'dart:convert'; // Import for jsonEncode and jsonDecode
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({Key? key}) : super(key: key);
@@ -357,122 +359,8 @@ class _TasksScreenState extends State<TasksScreen> {
                     child: Builder(
                       builder: (context) {
                         return GestureDetector(
-                          onLongPress: () {
-                            final editTaskNameController = TextEditingController(text: t.title);
-                            String editTaskSize = t.size;
-                            bool editTaskRecurring = t.isRecurring;
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                              ),
-                              builder: (ctx) {
-                                return StatefulBuilder(
-                                  builder: (context, setModalState) {
-                                    return Padding(
-                                      padding: EdgeInsets.only(
-                                        left: 24,
-                                        right: 24,
-                                        top: 24,
-                                        bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Edit Task',
-                                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 18),
-                                          TextField(
-                                            autofocus: true,
-                                            controller: editTaskNameController,
-                                            decoration: const InputDecoration(
-                                              labelText: 'Task Name',
-                                              border: OutlineInputBorder(),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 18),
-                                          const Text('Task Size', style: TextStyle(fontWeight: FontWeight.w600)),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              ChoiceChip(
-                                                label: const Text('Small'),
-                                                selected: editTaskSize == 'small',
-                                                onSelected: (_) => setModalState(() => editTaskSize = 'small'),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              ChoiceChip(
-                                                label: const Text('Medium'),
-                                                selected: editTaskSize == 'medium',
-                                                onSelected: (_) => setModalState(() => editTaskSize = 'medium'),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              ChoiceChip(
-                                                label: const Text('Large'),
-                                                selected: editTaskSize == 'large',
-                                                onSelected: (_) => setModalState(() => editTaskSize = 'large'),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 18),
-                                          SwitchListTile(
-                                            title: const Text('Daily Task'),
-                                            subtitle: const Text('This task will reset every day.'),
-                                            value: editTaskRecurring,
-                                            onChanged: (value) {
-                                              setModalState(() {
-                                                editTaskRecurring = value;
-                                              });
-                                            },
-                                          ),
-                                          const SizedBox(height: 24),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.end,
-                                            children: [
-                                              TextButton(
-                                                onPressed: () {
-                                                  editTaskNameController.dispose();
-                                                  Navigator.pop(ctx);
-                                                },
-                                                child: const Text('Cancel'),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              ElevatedButton(
-                                                onPressed: () {
-                                                  if (editTaskNameController.text.trim().isEmpty) return;
-                                                  int points = editTaskSize == 'small'
-                                                      ? smallPoints
-                                                      : editTaskSize == 'medium'
-                                                          ? mediumPoints
-                                                          : largePoints;
-                                                  Task updatedTask = Task(
-                                                    id: t.id,
-                                                    title: editTaskNameController.text.trim(),
-                                                    points: points,
-                                                    dueDate: t.dueDate,
-                                                    size: editTaskSize,
-                                                    isRecurring: editTaskRecurring,
-                                                    completed: t.completed,
-                                                  );
-                                                  taskProvider.updateTask(i, updatedTask);
-                                                  editTaskNameController.dispose();
-                                                  Navigator.pop(ctx);
-                                                },
-                                                child: const Text('Save'),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            );
+                          onLongPress: () async {
+                            // Removed edit functionality
                           },
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 14),
