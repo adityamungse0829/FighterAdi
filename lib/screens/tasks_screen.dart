@@ -58,6 +58,7 @@ class _TasksScreenState extends State<TasksScreen> {
     String newTaskName = '';
     String newTaskSize = 'small';
     bool newTaskRecurring = false;
+    String newTaskSection = 'Physical'; // Default section
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     
     showModalBottomSheet(
@@ -92,6 +93,34 @@ class _TasksScreenState extends State<TasksScreen> {
                       border: OutlineInputBorder(),
                     ),
                     onChanged: (v) => newTaskName = v,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text('Section', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Physical'),
+                        selected: newTaskSection == 'Physical',
+                        onSelected: (_) => setModalState(() => newTaskSection = 'Physical'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Mental'),
+                        selected: newTaskSection == 'Mental',
+                        onSelected: (_) => setModalState(() => newTaskSection = 'Mental'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Financial'),
+                        selected: newTaskSection == 'Financial',
+                        onSelected: (_) => setModalState(() => newTaskSection = 'Financial'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Emotional'),
+                        selected: newTaskSection == 'Emotional',
+                        onSelected: (_) => setModalState(() => newTaskSection = 'Emotional'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 18),
                   const Text('Task Size', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -153,6 +182,7 @@ class _TasksScreenState extends State<TasksScreen> {
                             dueDate: DateTime.now(), // Assuming due date is today for simplicity
                             size: newTaskSize,
                             isRecurring: newTaskRecurring,
+                            section: newTaskSection, // Add section
                           );
                           
                           taskProvider.addTask(newTask);
@@ -198,8 +228,24 @@ class _TasksScreenState extends State<TasksScreen> {
         ? '\nConsistency: ${taskProvider.consistencyCount} Day${taskProvider.consistencyCount > 1 ? 's' : ''} 🔥'
         : '';
 
+    // Get section progress
+    final sectionProgress = taskProvider.getSectionProgress();
+    final sectionTaskCounts = taskProvider.getSectionTaskCounts();
+    final sectionCompletedCounts = taskProvider.getSectionCompletedCounts();
+    
+    String sectionBreakdown = '';
+    for (String section in ['Physical', 'Mental', 'Financial', 'Emotional']) {
+      final progress = sectionProgress[section] ?? 0.0;
+      final totalTasks = sectionTaskCounts[section] ?? 0;
+      final completedTasks = sectionCompletedCounts[section] ?? 0;
+      
+      if (totalTasks > 0) {
+        sectionBreakdown += '\n${section}: ${progress.round()}% (${completedTasks}/${totalTasks})';
+      }
+    }
+
     final shareText =
-        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nPercentage: $percent%\n$consistencyText\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
+        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nOverall Progress: $percent%$consistencyText\n\nSection Breakdown:$sectionBreakdown\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
     Share.share(shareText);
   }
 
@@ -329,6 +375,108 @@ class _TasksScreenState extends State<TasksScreen> {
                   ),
                 ),
                 const SizedBox(height: 30),
+                // Section Progress Card
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '4-Pillar Progress',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ...['Physical', 'Mental', 'Financial', 'Emotional'].map((section) {
+                          final sectionProgress = taskProvider.getSectionProgress();
+                          final sectionTaskCounts = taskProvider.getSectionTaskCounts();
+                          final sectionCompletedCounts = taskProvider.getSectionCompletedCounts();
+                          
+                          final progress = sectionProgress[section] ?? 0.0;
+                          final totalTasks = sectionTaskCounts[section] ?? 0;
+                          final completedTasks = sectionCompletedCounts[section] ?? 0;
+                          
+                          Color sectionColor;
+                          switch (section) {
+                            case 'Physical':
+                              sectionColor = Colors.green;
+                              break;
+                            case 'Mental':
+                              sectionColor = Colors.blue;
+                              break;
+                            case 'Financial':
+                              sectionColor = Colors.orange;
+                              break;
+                            case 'Emotional':
+                              sectionColor = Colors.purple;
+                              break;
+                            default:
+                              sectionColor = Colors.grey;
+                          }
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      section,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      totalTasks > 0 ? '${progress.round()}%' : 'No tasks',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: sectionColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (totalTasks > 0) ...[
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: SizedBox(
+                                      height: 8,
+                                      child: LinearProgressIndicator(
+                                        value: progress / 100,
+                                        backgroundColor: Colors.grey.shade200,
+                                        valueColor: AlwaysStoppedAnimation<Color>(sectionColor),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$completedTasks of $totalTasks tasks completed',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
                 Text(
                   "Today's Tasks",
                   style: TextStyle(
@@ -394,14 +542,35 @@ class _TasksScreenState extends State<TasksScreen> {
                               title: Row(
                                 children: [
                                   Expanded(
-                                    child: Text(
-                                      t.title,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        decoration: t.completed ? TextDecoration.lineThrough : null,
-                                      ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          t.title,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            decoration: t.completed ? TextDecoration.lineThrough : null,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            t.section,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   if (t.isRecurring) ...[

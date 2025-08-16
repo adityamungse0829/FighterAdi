@@ -6,6 +6,7 @@ class Task {
   int points;
   String size; // Add size property
   bool isRecurring; // Add isRecurring property
+  String section; // Add section property for 4-pillar system
 
   Task({
     required this.id,
@@ -15,6 +16,7 @@ class Task {
     this.points = 0,
     this.size = 'small', // Initialize size with a default value
     this.isRecurring = false, // Initialize isRecurring with a default value
+    this.section = 'Physical', // Initialize section with a default value
   });
 
   // Convert a Task object into a Map object
@@ -27,6 +29,7 @@ class Task {
       'points': points,
       'size': size, // Include size in toJson
       'isRecurring': isRecurring, // Include isRecurring in toJson
+      'section': section, // Include section in toJson
     };
   }
 
@@ -40,6 +43,7 @@ class Task {
       points: json['points'] ?? 0,
       size: json['size'] ?? 'small', // Include size in fromJson
       isRecurring: json['isRecurring'] ?? false, // Include isRecurring in fromJson
+      section: json['section'] ?? 'Physical', // Include section in fromJson
     );
   }
 }

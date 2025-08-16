@@ -236,4 +236,57 @@ class TaskProvider extends ChangeNotifier {
     _saveTasksInternal(); // Save immediately
     notifyListeners();
   }
+
+  // Section-based progress calculation methods
+  Map<String, double> getSectionProgress() {
+    final sections = ['Physical', 'Mental', 'Financial', 'Emotional'];
+    final Map<String, double> sectionProgress = {};
+    
+    for (String section in sections) {
+      final sectionTasks = _tasks.where((task) => task.section == section).toList();
+      if (sectionTasks.isEmpty) {
+        sectionProgress[section] = 0.0;
+      } else {
+        final completedTasks = sectionTasks.where((task) => task.completed).length;
+        sectionProgress[section] = (completedTasks / sectionTasks.length) * 100;
+      }
+    }
+    
+    return sectionProgress;
+  }
+
+  Map<String, int> getSectionTaskCounts() {
+    final sections = ['Physical', 'Mental', 'Financial', 'Emotional'];
+    final Map<String, int> sectionCounts = {};
+    
+    for (String section in sections) {
+      final sectionTasks = _tasks.where((task) => task.section == section).toList();
+      sectionCounts[section] = sectionTasks.length;
+    }
+    
+    return sectionCounts;
+  }
+
+  Map<String, int> getSectionCompletedCounts() {
+    final sections = ['Physical', 'Mental', 'Financial', 'Emotional'];
+    final Map<String, int> sectionCompletedCounts = {};
+    
+    for (String section in sections) {
+      final sectionTasks = _tasks.where((task) => task.section == section).toList();
+      final completedTasks = sectionTasks.where((task) => task.completed).length;
+      sectionCompletedCounts[section] = completedTasks;
+    }
+    
+    return sectionCompletedCounts;
+  }
+
+  double getOverallProgress() {
+    if (_tasks.isEmpty) return 0.0;
+    final completedTasks = _tasks.where((task) => task.completed).length;
+    return (completedTasks / _tasks.length) * 100;
+  }
+
+  List<String> getSections() {
+    return ['Physical', 'Mental', 'Financial', 'Emotional'];
+  }
 }  
