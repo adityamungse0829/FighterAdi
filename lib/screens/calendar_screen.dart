@@ -16,6 +16,7 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
   String _viewMode = 'daily'; // 'daily', 'weekly', 'monthly'
+  DateTime _lastRefreshDate = DateTime.now(); // Track when we last refreshed data
 
   Color _getDayColor(double percent) {
     if (percent == 0.0) return Colors.grey.shade300;
@@ -26,25 +27,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   double _getCompletionForDay(DateTime day, List<Task> allTasks) {
-    final tasks = allTasks.where((t) {
-      if (t.dueDate != null) {
-        try {
-          final taskDate = t.dueDate;
-          return taskDate.year == day.year && 
-                 taskDate.month == day.month && 
-                 taskDate.day == day.day;
-        } catch (e) {
-          // If date parsing fails, skip this task
-          return false;
-        }
-      }
-      return false;
-    }).toList();
+    // Use the new method from TaskProvider for better date handling
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    final tasksForDay = taskProvider.getTasksForDate(day);
     
-    if (tasks.isEmpty) return 0.0;
-    final total = tasks.fold(0, (sum, t) => sum + t.points);
+    if (tasksForDay.isEmpty) return 0.0;
+    final total = tasksForDay.fold(0, (sum, t) => sum + t.points);
     if (total == 0) return 0.0;
-    final completed = tasks.fold(0, (sum, t) => sum + (t.completed ? t.points : 0));
+    final completed = tasksForDay.fold(0, (sum, t) => sum + (t.completed ? t.points : 0));
     return completed / total;
   }
 
@@ -78,7 +68,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _showWeeklyProgress(BuildContext context, DateTime weekStart) {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    final allTasks = taskProvider.tasks;
+    final allTasks = taskProvider.allTasks; // Use allTasks to include historical data
     
     final weekEnd = weekStart.add(const Duration(days: 6));
     final weekCompletion = _getCompletionForWeek(weekStart, allTasks);
@@ -396,25 +386,34 @@ $weeklyBreakdown
     });
   }
 
+  // Check if we need to refresh data (e.g., new day/week/month)
+  void _checkAndRefreshData() {
+    final now = DateTime.now();
+    final lastRefresh = _lastRefreshDate;
+    
+    // Check if it's a new day, week, or month
+    if (now.year != lastRefresh.year || 
+        now.month != lastRefresh.month || 
+        now.day != lastRefresh.day) {
+      
+      print('🔄 New day detected, refreshing calendar data');
+      setState(() {
+        _lastRefreshDate = now;
+        // Force refresh by updating focused month if needed
+        if (_focusedMonth.year == lastRefresh.year && 
+            _focusedMonth.month == lastRefresh.month) {
+          _focusedMonth = DateTime(now.year, now.month, 1);
+        }
+      });
+    }
+  }
+
   void _showTasksForDay(BuildContext context, int dayNum) {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    final allTasks = taskProvider.tasks;
     final dayDate = DateTime(_focusedMonth.year, _focusedMonth.month, dayNum);
     
-    final tasksForDay = allTasks.where((t) {
-      if (t.dueDate != null) {
-        try {
-          final taskDate = t.dueDate;
-          return taskDate.year == dayDate.year && 
-                 taskDate.month == dayDate.month && 
-                 taskDate.day == dayDate.day;
-        } catch (e) {
-          // If date parsing fails, skip this task
-          return false;
-        }
-      }
-      return false;
-    }).toList();
+    // Use the new method from TaskProvider
+    final tasksForDay = taskProvider.getTasksForDate(dayDate);
 
     showModalBottomSheet(
       context: context,
@@ -454,6 +453,11 @@ $weeklyBreakdown
                               decoration: task.completed ? TextDecoration.lineThrough : null,
                             ),
                           ),
+                          subtitle: Text(
+                            task.completed 
+                              ? 'Completed on ${task.completionDate?.day}/${task.completionDate?.month}/${task.completionDate?.year}'
+                              : 'Due on ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
+                          ),
                           trailing: Text(
                             '${task.points} pts',
                             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -472,9 +476,12 @@ $weeklyBreakdown
 
   @override
   Widget build(BuildContext context) {
+    // Check if we need to refresh data
+    _checkAndRefreshData();
+    
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, child) {
-        final allTasks = taskProvider.tasks;
+        final allTasks = taskProvider.allTasks; // Use allTasks to include historical data for accurate progress
         
         final now = DateTime.now();
         final firstDayOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
@@ -547,7 +554,9 @@ $weeklyBreakdown
                   child: InkWell(
                     onTap: () {
                       if (_viewMode == 'weekly') {
-                        final weekStart = _focusedMonth.subtract(Duration(days: _focusedMonth.weekday));
+                        // For weekly view, use current date to calculate week start
+                        final now = DateTime.now();
+                        final weekStart = now.subtract(Duration(days: now.weekday % 7));
                         _showWeeklyProgress(context, weekStart);
                       } else if (_viewMode == 'monthly') {
                         _showMonthlyProgress(context, _focusedMonth);

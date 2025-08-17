@@ -25,11 +25,13 @@ class _TasksScreenState extends State<TasksScreen> {
   int smallPoints = 1;
   int mediumPoints = 3;
   int largePoints = 5;
+  String lastUsedSection = 'Physical'; // Remember last used section
 
   @override
   void initState() {
     super.initState();
     _loadPoints();
+    _loadLastSection();
   }
 
   Future<void> _loadPoints() async {
@@ -38,6 +40,21 @@ class _TasksScreenState extends State<TasksScreen> {
       smallPoints = prefs.getInt('smallPoints') ?? 1;
       mediumPoints = prefs.getInt('mediumPoints') ?? 3;
       largePoints = prefs.getInt('largePoints') ?? 5;
+    });
+  }
+
+  Future<void> _loadLastSection() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      lastUsedSection = prefs.getString('lastUsedSection') ?? 'Physical';
+    });
+  }
+
+  Future<void> _saveLastSection(String section) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('lastUsedSection', section);
+    setState(() {
+      lastUsedSection = section;
     });
   }
 
@@ -58,7 +75,7 @@ class _TasksScreenState extends State<TasksScreen> {
     String newTaskName = '';
     String newTaskSize = 'small';
     bool newTaskRecurring = false;
-    String newTaskSection = 'Physical'; // Default section
+    String newTaskSection = lastUsedSection; // Use remembered section
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     
     showModalBottomSheet(
@@ -186,6 +203,9 @@ class _TasksScreenState extends State<TasksScreen> {
                           );
                           
                           taskProvider.addTask(newTask);
+                          
+                          // Remember the section for next time
+                          _saveLastSection(newTaskSection);
                           
                           Navigator.pop(ctx);
                         },
