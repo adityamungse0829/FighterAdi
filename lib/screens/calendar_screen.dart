@@ -32,23 +32,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final tasksForDay = taskProvider.getTasksForDate(day);
     
     if (tasksForDay.isEmpty) return 0.0;
-    final total = tasksForDay.fold(0, (sum, t) => sum + t.points);
-    if (total == 0) return 0.0;
-    final completed = tasksForDay.fold(0, (sum, t) => sum + (t.completed ? t.points : 0));
-    return completed / total;
+    
+    // Calculate based on points, not task count
+    final totalPoints = tasksForDay.fold(0, (sum, task) => sum + task.points);
+    if (totalPoints == 0) return 0.0;
+    
+    final completedPoints = tasksForDay.fold(0, (sum, task) => sum + (task.completed ? task.points : 0));
+    return completedPoints / totalPoints;
   }
 
   double _getCompletionForWeek(DateTime weekStart, List<Task> allTasks) {
     double totalCompletion = 0.0;
-    int totalDays = 7; // Always consider all 7 days of the week
+    int daysWithTasks = 0;
     
     for (int i = 0; i < 7; i++) {
       final day = weekStart.add(Duration(days: i));
       final dayCompletion = _getCompletionForDay(day, allTasks);
-      totalCompletion += dayCompletion; // Add completion for all days, even if 0
+      
+      if (dayCompletion > 0) {
+        totalCompletion += dayCompletion;
+        daysWithTasks++;
+      }
     }
     
-    return totalCompletion / totalDays; // Return average across all days
+    // Return average completion for days that actually had tasks
+    return daysWithTasks > 0 ? totalCompletion / daysWithTasks : 0.0;
   }
 
   double _getCompletionForMonth(DateTime month, List<Task> allTasks) {
@@ -56,14 +64,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final firstDay = DateTime(month.year, month.month, 1);
     final lastDay = DateTime(month.year, month.month + 1, 0);
     final totalDays = lastDay.day; // Total days in the month
+    int daysWithTasks = 0;
     
     for (int day = 1; day <= totalDays; day++) {
       final date = DateTime(month.year, month.month, day);
       final dayCompletion = _getCompletionForDay(date, allTasks);
-      totalCompletion += dayCompletion; // Add completion for all days, even if 0
+      
+      if (dayCompletion > 0) {
+        totalCompletion += dayCompletion;
+        daysWithTasks++;
+      }
     }
     
-    return totalCompletion / totalDays; // Return average across all days
+    // Return average completion for days that actually had tasks
+    return daysWithTasks > 0 ? totalCompletion / daysWithTasks : 0.0;
   }
 
   void _showWeeklyProgress(BuildContext context, DateTime weekStart) {
@@ -75,6 +89,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     
     void _shareWeeklyProgress() {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
       final userName = userProvider.displayName;
       
       final weekStartStr = '${_monthName(weekStart.month)} ${weekStart.day}';
@@ -100,13 +115,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
       }
       
+      // Get 90-day challenge info
+      String challengeText = '';
+      if (taskProvider.challengeActive) {
+        challengeText = '\n🎯 90-Day Challenge: ${taskProvider.challengeDaysRemaining} days remaining out of 90';
+      }
+      
       final shareText = '''📅 Fighter App - Weekly Progress Report
 
 👤 User: $userName
 📆 Week: $weekStartStr - $weekEndStr
 🎯 Overall Progress: ${(weekCompletion * 100).round()}%
 ✅ Completed Days: $completedDays/$daysWithTasks
-📊 Days with Tasks: $daysWithTasks/7
+📊 Days with Tasks: $daysWithTasks/7$challengeText
 
 📊 Daily Breakdown:
 $dailyBreakdown
@@ -231,6 +252,7 @@ $dailyBreakdown
     
     void _shareMonthlyProgress() {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
       final userName = userProvider.displayName;
       
       String weeklyBreakdown = '';
@@ -253,13 +275,19 @@ $dailyBreakdown
         }
       }
       
+      // Get 90-day challenge info
+      String challengeText = '';
+      if (taskProvider.challengeActive) {
+        challengeText = '\n🎯 90-Day Challenge: ${taskProvider.challengeDaysRemaining} days remaining out of 90';
+      }
+      
       final shareText = '''📅 Fighter App - Monthly Progress Report
 
 👤 User: $userName
 📆 Month: ${_monthName(month.month)} ${month.year}
 🎯 Overall Progress: ${(monthCompletion * 100).round()}%
 ✅ Completed Weeks: $completedWeeks/$weeksWithTasks
-📊 Weeks with Tasks: $weeksWithTasks/$totalWeeks
+📊 Weeks with Tasks: $weeksWithTasks/$totalWeeks$challengeText
 
 📊 Weekly Breakdown:
 $weeklyBreakdown
@@ -411,10 +439,9 @@ $weeklyBreakdown
   void _showTasksForDay(BuildContext context, int dayNum) {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final dayDate = DateTime(_focusedMonth.year, _focusedMonth.month, dayNum);
-    
+  
     // Use the new method from TaskProvider
     final tasksForDay = taskProvider.getTasksForDate(dayDate);
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true, // Allows the modal to take full screen height

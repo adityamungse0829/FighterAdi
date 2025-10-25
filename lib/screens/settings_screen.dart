@@ -218,6 +218,301 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _showConsistencyUpdateDialog(BuildContext context, TaskProvider taskProvider) {
+    final controller = TextEditingController(text: taskProvider.consistencyCount.toString());
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Update Consistency Count'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the new consistency count:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Consistency Count',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newCount = int.tryParse(controller.text);
+              if (newCount != null && newCount >= 0) {
+                taskProvider.updateConsistencyCount(newCount);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Consistency count updated to $newCount')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid number (0 or greater)')),
+                );
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDatePickerDialog(BuildContext context, TaskProvider taskProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Set Last Consistency Update Date'),
+        content: const Text('Select the date for the last consistency update:'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final date = await showDatePicker(
+                context: context,
+                initialDate: taskProvider.lastConsistencyUpdate != null 
+                    ? DateTime.parse('${taskProvider.lastConsistencyUpdate}T00:00:00')
+                    : DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              
+              if (date != null) {
+                taskProvider.setLastConsistencyUpdate(date);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Last consistency update set to ${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}')),
+                );
+              }
+            },
+            child: const Text('Select Date'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resetConsistency(BuildContext context, TaskProvider taskProvider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Consistency'),
+        content: const Text('Are you sure you want to reset your consistency count and last update date? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      taskProvider.resetConsistencyCount();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Consistency data has been reset')),
+      );
+    }
+  }
+
+  void _startChallenge(BuildContext context, TaskProvider taskProvider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Start 90-Day Challenge'),
+        content: const Text('Are you ready to start your 90-day challenge? The countdown will begin today and automatically decrement each day.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Start Challenge'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      taskProvider.start90DayChallenge();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('90-day challenge started! Good luck! 🎯')),
+      );
+    }
+  }
+
+  void _stopChallenge(BuildContext context, TaskProvider taskProvider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Stop Challenge'),
+        content: const Text('Are you sure you want to stop the 90-day challenge? Your progress will be saved but the countdown will pause.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Stop'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      taskProvider.stop90DayChallenge();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Challenge stopped. You can restart anytime!')),
+      );
+    }
+  }
+
+  void _resetChallenge(BuildContext context, TaskProvider taskProvider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Challenge'),
+        content: const Text('Are you sure you want to reset the 90-day challenge? This will clear all progress and start fresh. This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed == true) {
+      taskProvider.reset90DayChallenge();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Challenge reset successfully')),
+      );
+    }
+  }
+
+  void _showChallengeUpdateDialog(BuildContext context, TaskProvider taskProvider) {
+    final controller = TextEditingController(text: taskProvider.challengeDaysRemaining.toString());
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Update Days Remaining'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the number of days remaining in your challenge:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Days Remaining',
+                border: OutlineInputBorder(),
+                helperText: 'Enter a number between 0 and 90',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final days = int.tryParse(controller.text);
+              if (days != null && days >= 0 && days <= 90) {
+                taskProvider.updateChallengeDaysRemaining(days);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Days remaining updated to $days')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a valid number between 0 and 90')),
+                );
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChallengeDateDialog(BuildContext context, TaskProvider taskProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Set Challenge Start Date'),
+        content: const Text('Select the date when you started your 90-day challenge:'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final date = await showDatePicker(
+                context: context,
+                initialDate: taskProvider.challengeStartDate ?? DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              
+              if (date != null) {
+                taskProvider.setChallengeStartDate(date);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Challenge start date set to ${date.day}/${date.month}/${date.year}')),
+                );
+              }
+            },
+            child: const Text('Select Date'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
@@ -379,6 +674,374 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 30),
+            
+            // Consistency Management Section
+            Consumer<TaskProvider>(
+              builder: (context, taskProvider, child) {
+                return Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.trending_up,
+                              color: Colors.deepPurple,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Consistency Management',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Current consistency info
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurple.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.deepPurple.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Current Streak:'),
+                                  Text(
+                                    '${taskProvider.consistencyCount} days',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (taskProvider.lastConsistencyUpdate != null) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Last Update:'),
+                                    Text(
+                                      taskProvider.lastConsistencyUpdate!,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Manual update buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showConsistencyUpdateDialog(context, taskProvider),
+                                icon: const Icon(Icons.edit),
+                                label: const Text('Update Count'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showDatePickerDialog(context, taskProvider),
+                                icon: const Icon(Icons.calendar_today),
+                                label: const Text('Set Date'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 12),
+                        
+                        // Reset button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _resetConsistency(context, taskProvider),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reset Consistency'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            
+            const SizedBox(height: 30),
+            
+            // 90-Day Challenge Section
+            Consumer<TaskProvider>(
+              builder: (context, taskProvider, child) {
+                return Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.emoji_events,
+                              color: Colors.amber,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              '90-Day Challenge',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Challenge status display
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: taskProvider.challengeActive ? Colors.amber.shade50 : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: taskProvider.challengeActive ? Colors.amber.shade200 : Colors.grey.shade200,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Status:'),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: taskProvider.challengeActive ? Colors.green : Colors.grey,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      taskProvider.challengeActive ? 'Active' : 'Inactive',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (taskProvider.challengeActive) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Days Completed:'),
+                                    Text(
+                                      '${taskProvider.challengeDaysCompleted}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Days Remaining:'),
+                                    Text(
+                                      '${taskProvider.challengeDaysRemaining}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (taskProvider.challengeStartDate != null) ...[
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Start Date:'),
+                                      Text(
+                                        '${taskProvider.challengeStartDate!.day}/${taskProvider.challengeStartDate!.month}/${taskProvider.challengeStartDate!.year}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                // Progress bar
+                                const SizedBox(height: 12),
+                                LinearProgressIndicator(
+                                  value: taskProvider.challengeDaysCompleted / 90,
+                                  backgroundColor: Colors.grey.shade300,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.amber.shade600),
+                                  minHeight: 8,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${((taskProvider.challengeDaysCompleted / 90) * 100).toStringAsFixed(1)}% Complete',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Challenge control buttons
+                        if (!taskProvider.challengeActive) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _startChallenge(context, taskProvider),
+                              icon: const Icon(Icons.play_arrow),
+                              label: const Text('Start 90-Day Challenge'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showChallengeUpdateDialog(context, taskProvider),
+                                  icon: const Icon(Icons.edit),
+                                  label: const Text('Update Days'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showChallengeDateDialog(context, taskProvider),
+                                  icon: const Icon(Icons.calendar_today),
+                                  label: const Text('Set Start Date'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _stopChallenge(context, taskProvider),
+                                  icon: const Icon(Icons.pause),
+                                  label: const Text('Stop Challenge'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _resetChallenge(context, taskProvider),
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Reset Challenge'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            
             const SizedBox(height: 30),
             // Backup and Restore Buttons
             ElevatedButton(

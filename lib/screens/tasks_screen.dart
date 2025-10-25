@@ -248,6 +248,17 @@ class _TasksScreenState extends State<TasksScreen> {
         ? '\nConsistency: ${taskProvider.consistencyCount} Day${taskProvider.consistencyCount > 1 ? 's' : ''} 🔥'
         : '';
 
+    // Get 90-day challenge info
+    String challengeText = '';
+    print('🔍 Challenge Active: ${taskProvider.challengeActive}');
+    print('🔍 Challenge Days Remaining: ${taskProvider.challengeDaysRemaining}');
+    if (taskProvider.challengeActive) {
+      challengeText = '\n🎯 90-Day Challenge: ${taskProvider.challengeDaysRemaining} days remaining out of 90';
+      print('🔍 Challenge text added to share: $challengeText');
+    } else {
+      print('🔍 Challenge not active, no challenge text added');
+    }
+
     // Get section progress
     final sectionProgress = taskProvider.getSectionProgress();
     final sectionTaskCounts = taskProvider.getSectionTaskCounts();
@@ -256,16 +267,16 @@ class _TasksScreenState extends State<TasksScreen> {
     String sectionBreakdown = '';
     for (String section in ['Physical', 'Mental', 'Financial', 'Emotional']) {
       final progress = sectionProgress[section] ?? 0.0;
-      final totalTasks = sectionTaskCounts[section] ?? 0;
-      final completedTasks = sectionCompletedCounts[section] ?? 0;
+      final totalPoints = sectionTaskCounts[section] ?? 0;
+      final completedPoints = sectionCompletedCounts[section] ?? 0;
       
-      if (totalTasks > 0) {
-        sectionBreakdown += '\n${section}: ${progress.round()}% (${completedTasks}/${totalTasks})';
+      if (totalPoints > 0) {
+        sectionBreakdown += '\n${section}: ${progress.round()}% (${completedPoints}/${totalPoints} pts)';
       }
     }
 
     final shareText =
-        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nOverall Progress: $percent%$consistencyText\n\nSection Breakdown:$sectionBreakdown\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
+        'Fighter App Progress - $userName\n\nDate: $dateString\nTotal Score: $completedPoints / $totalPoints \nOverall Progress: $percent%$consistencyText$challengeText\n\nSection Breakdown:$sectionBreakdown\n\nTasks Completed:\n$completedList\n\nTasks Pending:\n$pendingList\n\n#FighterApp #Productivity';
     Share.share(shareText);
   }
 
@@ -292,9 +303,15 @@ class _TasksScreenState extends State<TasksScreen> {
 
         return Stack(
           children: [
-            ListView(
-              padding: const EdgeInsets.fromLTRB(20, 40, 20, 100),
-              children: [
+            CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 40, 20, 100),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      Column(
+                        children: [
                 // Welcome message with user name
                 Text(
                   userProvider.welcomeMessage,
@@ -414,14 +431,16 @@ class _TasksScreenState extends State<TasksScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        ...['Physical', 'Mental', 'Financial', 'Emotional'].map((section) {
+                        ...(() {
+                          // Calculate section progress once for all sections
                           final sectionProgress = taskProvider.getSectionProgress();
                           final sectionTaskCounts = taskProvider.getSectionTaskCounts();
                           final sectionCompletedCounts = taskProvider.getSectionCompletedCounts();
                           
-                          final progress = sectionProgress[section] ?? 0.0;
-                          final totalTasks = sectionTaskCounts[section] ?? 0;
-                          final completedTasks = sectionCompletedCounts[section] ?? 0;
+                          return ['Physical', 'Mental', 'Financial', 'Emotional'].map((section) {
+                            final progress = sectionProgress[section] ?? 0.0;
+                            final totalPoints = sectionTaskCounts[section] ?? 0;
+                            final completedPoints = sectionCompletedCounts[section] ?? 0;
                           
                           Color sectionColor;
                           switch (section) {
@@ -457,7 +476,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                       ),
                                     ),
                                     Text(
-                                      totalTasks > 0 ? '${progress.round()}%' : 'No tasks',
+                                      totalPoints > 0 ? '${progress.round()}%' : 'No tasks',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -466,7 +485,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                     ),
                                   ],
                                 ),
-                                if (totalTasks > 0) ...[
+                                if (totalPoints > 0) ...[
                                   const SizedBox(height: 8),
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
@@ -481,7 +500,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '$completedTasks of $totalTasks tasks completed',
+                                    '$completedPoints of $totalPoints points completed',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey.shade600,
@@ -491,7 +510,8 @@ class _TasksScreenState extends State<TasksScreen> {
                               ],
                             ),
                           );
-                        }).toList(),
+                          }).toList();
+                        })(),
                       ],
                     ),
                   ),
@@ -652,6 +672,11 @@ class _TasksScreenState extends State<TasksScreen> {
                   );
                 }),
                 const SizedBox(height: 80),
+                        ],
+                      ),
+                    ]),
+                  ),
+                ),
               ],
             ),
             // Share button (top right)

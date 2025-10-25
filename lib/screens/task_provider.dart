@@ -9,10 +9,29 @@ class TaskProvider extends ChangeNotifier {
   int _consistencyCount = 0;
   String? _lastConsistencyUpdate;
   bool _isInitialized = false;
+  
+  // 90-day challenge variables
+  int _challengeDaysRemaining = 90;
+  DateTime? _challengeStartDate;
+  bool _challengeActive = false;
 
   List<Task> get tasks => List.unmodifiable(getVisibleTasks());
   int get consistencyCount => _consistencyCount;
   bool get isInitialized => _isInitialized;
+  
+  // 90-day challenge getters
+  int get challengeDaysRemaining {
+    print('🔍 Getting challenge days remaining: $_challengeDaysRemaining');
+    return _challengeDaysRemaining;
+  }
+  DateTime? get challengeStartDate => _challengeStartDate;
+  bool get challengeActive {
+    print('🔍 Getting challenge active: $_challengeActive');
+    return _challengeActive;
+  }
+  int get challengeDaysCompleted => _challengeActive && _challengeStartDate != null 
+      ? (90 - _challengeDaysRemaining) 
+      : 0;
 
   // Get all tasks including archived ones (for history and reports)
   List<Task> get allTasks => List.unmodifiable(_tasks);
@@ -32,6 +51,11 @@ class TaskProvider extends ChangeNotifier {
   String get _storageKey => 'tasks_${_currentUserContext?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'guest'}';
   String get _consistencyCountKey => 'consistency_count_${_currentUserContext?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'guest'}';
   String get _lastConsistencyUpdateKey => 'last_consistency_update_${_currentUserContext?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'guest'}';
+  
+  // 90-day challenge storage keys
+  String get _challengeDaysRemainingKey => 'challenge_days_remaining_${_currentUserContext?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'guest'}';
+  String get _challengeStartDateKey => 'challenge_start_date_${_currentUserContext?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'guest'}';
+  String get _challengeActiveKey => 'challenge_active_${_currentUserContext?.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_') ?? 'guest'}';
 
   Future<void> _initializeStorage() async {
     if (_currentUserContext == null) return;
@@ -42,6 +66,12 @@ class TaskProvider extends ChangeNotifier {
       // Load consistency count
       _consistencyCount = prefs.getInt(_consistencyCountKey) ?? 0;
       _lastConsistencyUpdate = prefs.getString(_lastConsistencyUpdateKey);
+      
+      // Load 90-day challenge data
+      _challengeDaysRemaining = prefs.getInt(_challengeDaysRemainingKey) ?? 90;
+      _challengeActive = prefs.getBool(_challengeActiveKey) ?? false;
+      final startDateString = prefs.getString(_challengeStartDateKey);
+      _challengeStartDate = startDateString != null ? DateTime.parse(startDateString) : null;
 
       // Load tasks from storage
       final tasksJson = prefs.getString(_storageKey);
@@ -90,6 +120,9 @@ class TaskProvider extends ChangeNotifier {
       if (lastOpenedDateString != todayString) {
         print('🔄 New day detected, processing tasks at midnight');
         
+        // Update 90-day challenge
+        await _updateChallengeForNewDay();
+        
         // Reset completion status of recurring tasks (keep original due date)
         int resetCount = 0;
         for (var task in _tasks) {
@@ -104,16 +137,17 @@ class TaskProvider extends ChangeNotifier {
         }
         print('🔄 Reset $resetCount recurring tasks');
         
-        // Archive non-daily tasks (remove from main list but preserve for history)
-        int archivedCount = 0;
+        // DON'T archive non-daily tasks - keep them visible for history
+        // Instead, just mark them as completed for the previous day
+        int preservedCount = 0;
         for (var task in _tasks) {
-          if (!task.isRecurring) {
-            task.archived = true; // Mark as archived
-            archivedCount++;
-            print('📦 Archived non-daily task: ${task.title} (preserved for history)');
+          if (!task.isRecurring && !task.archived) {
+            // Keep non-daily tasks visible but mark them as from previous day
+            preservedCount++;
+            print('📦 Preserved non-daily task for history: ${task.title}');
           }
         }
-        print('📦 Archived $archivedCount non-daily tasks (preserved for history)');
+        print('📦 Preserved $preservedCount non-daily tasks for history');
         
         // Update the last opened date
         await prefs.setString(lastOpenedKey, todayString);
@@ -175,6 +209,98 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _saveChallengeData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_challengeDaysRemainingKey, _challengeDaysRemaining);
+    await prefs.setBool(_challengeActiveKey, _challengeActive);
+    if (_challengeStartDate != null) {
+      await prefs.setString(_challengeStartDateKey, _challengeStartDate!.toIso8601String());
+    }
+  }
+
+  Future<void> _updateChallengeForNewDay() async {
+    if (_challengeActive && _challengeStartDate != null) {
+      _challengeDaysRemaining = (_challengeDaysRemaining - 1).clamp(0, 90);
+      print('📅 90-day challenge: $challengeDaysCompleted days completed, $_challengeDaysRemaining days remaining');
+      
+      if (_challengeDaysRemaining <= 0) {
+        print('🎉 90-day challenge completed!');
+        _challengeActive = false;
+      }
+      
+      await _saveChallengeData();
+      notifyListeners();
+    }
+  }
+
+  // Manual consistency parameter update methods
+  Future<void> updateConsistencyCount(int newCount) async {
+    _consistencyCount = newCount;
+    await _saveConsistencyData();
+    print('🔢 Manually updated consistency count to: $_consistencyCount');
+    notifyListeners();
+  }
+
+  Future<void> resetConsistencyCount() async {
+    _consistencyCount = 0;
+    _lastConsistencyUpdate = null;
+    await _saveConsistencyData();
+    print('🔄 Reset consistency count and last update date');
+    notifyListeners();
+  }
+
+  Future<void> setLastConsistencyUpdate(DateTime date) async {
+    final dateString = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    _lastConsistencyUpdate = dateString;
+    await _saveConsistencyData();
+    print('📅 Manually set last consistency update to: $dateString');
+    notifyListeners();
+  }
+
+  String? get lastConsistencyUpdate => _lastConsistencyUpdate;
+
+  // 90-day challenge management methods
+  Future<void> start90DayChallenge() async {
+    _challengeActive = true;
+    _challengeStartDate = DateTime.now();
+    _challengeDaysRemaining = 90;
+    await _saveChallengeData();
+    print('🚀 90-day challenge started!');
+    notifyListeners();
+  }
+
+  Future<void> stop90DayChallenge() async {
+    _challengeActive = false;
+    _challengeStartDate = null;
+    _challengeDaysRemaining = 90;
+    await _saveChallengeData();
+    print('⏹️ 90-day challenge stopped');
+    notifyListeners();
+  }
+
+  Future<void> reset90DayChallenge() async {
+    _challengeActive = false;
+    _challengeStartDate = null;
+    _challengeDaysRemaining = 90;
+    await _saveChallengeData();
+    print('🔄 90-day challenge reset');
+    notifyListeners();
+  }
+
+  Future<void> updateChallengeDaysRemaining(int days) async {
+    _challengeDaysRemaining = days.clamp(0, 90);
+    await _saveChallengeData();
+    print('🔢 Updated challenge days remaining to: $_challengeDaysRemaining');
+    notifyListeners();
+  }
+
+  Future<void> setChallengeStartDate(DateTime date) async {
+    _challengeStartDate = date;
+    await _saveChallengeData();
+    print('📅 Set challenge start date to: $date');
+    notifyListeners();
+  }
+
   void addTask(Task task) {
     _tasks.add(task);
     print('➕ Added task: ${task.title}');
@@ -217,16 +343,34 @@ class TaskProvider extends ChangeNotifier {
   }
 
   void toggleTask(int index) async {
-    _tasks[index].completed = !_tasks[index].completed;
-    final status = _tasks[index].completed ? 'completed' : 'uncompleted';
-    print('🔄 Toggled task: ${_tasks[index].title} -> $status');
+    // Get visible tasks to ensure we're toggling the correct task
+    final visibleTasks = getVisibleTasks();
+    
+    if (index < 0 || index >= visibleTasks.length) {
+      print('❌ Invalid task index: $index (visible tasks: ${visibleTasks.length})');
+      return;
+    }
+    
+    final taskToToggle = visibleTasks[index];
+    final actualIndex = _tasks.indexWhere((task) => task.id == taskToToggle.id);
+    
+    if (actualIndex == -1) {
+      print('❌ Task not found in main list: ${taskToToggle.title}');
+      return;
+    }
+    
+    print('🔄 Toggling task at visible index $index: ${taskToToggle.title} (actual index: $actualIndex)');
+    
+    _tasks[actualIndex].completed = !_tasks[actualIndex].completed;
+    final status = _tasks[actualIndex].completed ? 'completed' : 'uncompleted';
+    print('🔄 Toggled task: ${_tasks[actualIndex].title} -> $status');
     
     // Set or clear completion date
-    if (_tasks[index].completed) {
-      _tasks[index].completionDate = DateTime.now();
-      print('📅 Set completion date: ${_tasks[index].completionDate}');
+    if (_tasks[actualIndex].completed) {
+      _tasks[actualIndex].completionDate = DateTime.now();
+      print('📅 Set completion date: ${_tasks[actualIndex].completionDate}');
     } else {
-      _tasks[index].completionDate = null;
+      _tasks[actualIndex].completionDate = null;
       print('📅 Cleared completion date');
     }
     
@@ -234,7 +378,7 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
 
     // Update consistency count
-    if (_tasks[index].completed) {
+    if (_tasks[actualIndex].completed) {
       final DateTime now = DateTime.now();
       final String todayString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
@@ -274,18 +418,53 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Section-based progress calculation methods
+  // Get tasks that are active today (for progress calculation)
+  List<Task> getTodayActiveTasks() {
+    final today = DateTime.now();
+    return allTasks.where((task) {
+      // Don't include archived tasks
+      if (task.archived) return false;
+      
+      // For daily tasks, include them if they exist (they reset daily)
+      if (task.isRecurring) {
+        return true; // Always include daily tasks for progress calculation
+      }
+      
+      // For non-daily tasks, include them if they were created today or are due today
+      final taskDate = task.dueDate;
+      return taskDate.year == today.year && 
+             taskDate.month == today.month && 
+             taskDate.day == today.day;
+    }).toList();
+  }
+
+  // Section-based progress calculation methods (based on points, not task count)
   Map<String, double> getSectionProgress() {
     final sections = ['Physical', 'Mental', 'Financial', 'Emotional'];
     final Map<String, double> sectionProgress = {};
     
+    // Get today's active tasks for progress calculation
+    final todayTasks = getTodayActiveTasks();
+    print('🔍 Total active tasks today: ${todayTasks.length}');
+    
     for (String section in sections) {
-      final sectionTasks = _tasks.where((task) => task.section == section).toList();
+      final sectionTasks = todayTasks.where((task) => task.section == section).toList();
+      print('🔍 $section section tasks: ${sectionTasks.length}');
+      
       if (sectionTasks.isEmpty) {
         sectionProgress[section] = 0.0;
+        print('🔍 $section: No tasks, progress = 0%');
       } else {
-        final completedTasks = sectionTasks.where((task) => task.completed).length;
-        sectionProgress[section] = (completedTasks / sectionTasks.length) * 100;
+        // Calculate based on points, not task count
+        final totalPoints = sectionTasks.fold(0, (sum, task) => sum + task.points);
+        final completedPoints = sectionTasks.fold(0, (sum, task) => sum + (task.completed ? task.points : 0));
+        final progress = totalPoints > 0 ? (completedPoints / totalPoints) * 100 : 0.0;
+        sectionProgress[section] = progress;
+        
+        print('🔍 $section: $completedPoints/$totalPoints points = ${progress.toStringAsFixed(1)}%');
+        for (var task in sectionTasks) {
+          print('   - ${task.title}: ${task.points}pts, completed: ${task.completed}');
+        }
       }
     }
     
@@ -296,9 +475,13 @@ class TaskProvider extends ChangeNotifier {
     final sections = ['Physical', 'Mental', 'Financial', 'Emotional'];
     final Map<String, int> sectionCounts = {};
     
+    // Get today's active tasks for progress calculation
+    final todayTasks = getTodayActiveTasks();
+    
     for (String section in sections) {
-      final sectionTasks = _tasks.where((task) => task.section == section).toList();
-      sectionCounts[section] = sectionTasks.length;
+      final sectionTasks = todayTasks.where((task) => task.section == section).toList();
+      // Return total points instead of task count
+      sectionCounts[section] = sectionTasks.fold(0, (sum, task) => sum + task.points);
     }
     
     return sectionCounts;
@@ -308,19 +491,26 @@ class TaskProvider extends ChangeNotifier {
     final sections = ['Physical', 'Mental', 'Financial', 'Emotional'];
     final Map<String, int> sectionCompletedCounts = {};
     
+    // Get today's active tasks for progress calculation
+    final todayTasks = getTodayActiveTasks();
+    
     for (String section in sections) {
-      final sectionTasks = _tasks.where((task) => task.section == section).toList();
-      final completedTasks = sectionTasks.where((task) => task.completed).length;
-      sectionCompletedCounts[section] = completedTasks;
+      final sectionTasks = todayTasks.where((task) => task.section == section).toList();
+      // Return completed points instead of task count
+      sectionCompletedCounts[section] = sectionTasks.fold(0, (sum, task) => sum + (task.completed ? task.points : 0));
     }
     
     return sectionCompletedCounts;
   }
 
   double getOverallProgress() {
-    if (_tasks.isEmpty) return 0.0;
-    final completedTasks = _tasks.where((task) => task.completed).length;
-    return (completedTasks / _tasks.length) * 100;
+    final todayTasks = getTodayActiveTasks();
+    if (todayTasks.isEmpty) return 0.0;
+    
+    final totalPoints = todayTasks.fold(0, (sum, task) => sum + task.points);
+    final completedPoints = todayTasks.fold(0, (sum, task) => sum + (task.completed ? task.points : 0));
+    
+    return totalPoints > 0 ? (completedPoints / totalPoints) * 100 : 0.0;
   }
 
   List<String> getSections() {
@@ -337,15 +527,16 @@ class TaskProvider extends ChangeNotifier {
                task.completionDate!.day == date.day;
       }
       // For pending tasks, use due date
-      // Also include daily tasks that were created on or before this date
       if (task.isRecurring) {
-        // Daily tasks: show if created on or before this date
-        return task.dueDate.year <= date.year && 
+        // Daily tasks: show if created on or before this date AND not completed
+        return !task.completed && 
+               task.dueDate.year <= date.year && 
                (task.dueDate.year < date.year || task.dueDate.month <= date.month) &&
                (task.dueDate.year < date.year || task.dueDate.month < date.month || task.dueDate.day <= date.day);
       } else {
-        // Non-daily tasks: show if due on this exact date
-        return task.dueDate.year == date.year && 
+        // Non-daily tasks: show if due on this exact date AND not completed
+        return !task.completed &&
+               task.dueDate.year == date.year && 
                task.dueDate.month == date.month && 
                task.dueDate.day == date.day;
       }
