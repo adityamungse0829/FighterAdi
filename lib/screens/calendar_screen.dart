@@ -43,41 +43,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   double _getCompletionForWeek(DateTime weekStart, List<Task> allTasks) {
     double totalCompletion = 0.0;
-    int daysWithTasks = 0;
-    
+
+    // Calculate completion for all 7 days in the week
     for (int i = 0; i < 7; i++) {
       final day = weekStart.add(Duration(days: i));
       final dayCompletion = _getCompletionForDay(day, allTasks);
-      
-      if (dayCompletion > 0) {
-        totalCompletion += dayCompletion;
-        daysWithTasks++;
-      }
+      totalCompletion += dayCompletion;
     }
-    
-    // Return average completion for days that actually had tasks
-    return daysWithTasks > 0 ? totalCompletion / daysWithTasks : 0.0;
+
+    // Return average completion across all 7 days
+    return totalCompletion / 7;
   }
 
   double _getCompletionForMonth(DateTime month, List<Task> allTasks) {
     double totalCompletion = 0.0;
-    final firstDay = DateTime(month.year, month.month, 1);
     final lastDay = DateTime(month.year, month.month + 1, 0);
     final totalDays = lastDay.day; // Total days in the month
-    int daysWithTasks = 0;
-    
+
+    // Calculate completion for all days in the month
     for (int day = 1; day <= totalDays; day++) {
       final date = DateTime(month.year, month.month, day);
       final dayCompletion = _getCompletionForDay(date, allTasks);
-      
-      if (dayCompletion > 0) {
-        totalCompletion += dayCompletion;
-        daysWithTasks++;
-      }
+      totalCompletion += dayCompletion;
     }
-    
-    // Return average completion for days that actually had tasks
-    return daysWithTasks > 0 ? totalCompletion / daysWithTasks : 0.0;
+
+    // Return average completion across all days in the month
+    return totalCompletion / totalDays;
   }
 
   void _showWeeklyProgress(BuildContext context, DateTime weekStart) {

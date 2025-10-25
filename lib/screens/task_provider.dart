@@ -119,11 +119,11 @@ class TaskProvider extends ChangeNotifier {
       // Only reset if it's actually a new day
       if (lastOpenedDateString != todayString) {
         print('🔄 New day detected, processing tasks at midnight');
-        
+
         // Update 90-day challenge
         await _updateChallengeForNewDay();
-        
-        // Reset completion status of recurring tasks (keep original due date)
+
+        // Reset completion status of recurring tasks (daily tasks)
         int resetCount = 0;
         for (var task in _tasks) {
           if (task.isRecurring) {
@@ -132,26 +132,26 @@ class TaskProvider extends ChangeNotifier {
             // DON'T change dueDate - keep it as the original creation date
             // This ensures daily tasks remain clickable and properly categorized
             resetCount++;
-            print('🔄 Reset daily task: ${task.title} - Kept original due date: ${task.dueDate}');
+            print('🔄 Reset daily task: ${task.title} - Unchecked for new day');
           }
         }
         print('🔄 Reset $resetCount recurring tasks');
-        
-        // DON'T archive non-daily tasks - keep them visible for history
-        // Instead, just mark them as completed for the previous day
-        int preservedCount = 0;
-        for (var task in _tasks) {
+
+        // Delete non-daily tasks (they were for yesterday)
+        int deletedCount = 0;
+        _tasks.removeWhere((task) {
           if (!task.isRecurring && !task.archived) {
-            // Keep non-daily tasks visible but mark them as from previous day
-            preservedCount++;
-            print('📦 Preserved non-daily task for history: ${task.title}');
+            deletedCount++;
+            print('🗑️ Deleted non-daily task: ${task.title}');
+            return true; // Remove this task
           }
-        }
-        print('📦 Preserved $preservedCount non-daily tasks for history');
-        
+          return false; // Keep this task
+        });
+        print('🗑️ Deleted $deletedCount non-daily tasks');
+
         // Update the last opened date
         await prefs.setString(lastOpenedKey, todayString);
-        
+
         // Save the updated tasks
         await _saveTasksInternal();
       } else {
@@ -258,6 +258,29 @@ class TaskProvider extends ChangeNotifier {
   }
 
   String? get lastConsistencyUpdate => _lastConsistencyUpdate;
+
+  // Manual method to trigger daily reset for testing
+  Future<void> manuallyTriggerDailyReset() async {
+    if (_currentUserContext == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String lastOpenedKey = 'last_opened_${_currentUserContext!.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+
+      // Set last opened to yesterday to trigger reset
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final yesterdayString = "${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}";
+      await prefs.setString(lastOpenedKey, yesterdayString);
+
+      print('🧪 Manually set last opened to yesterday: $yesterdayString');
+
+      // Now trigger the reset
+      await _checkAndResetRecurringTasks();
+      notifyListeners();
+    } catch (e) {
+      print('❌ Error triggering manual reset: $e');
+    }
+  }
 
   // 90-day challenge management methods
   Future<void> start90DayChallenge() async {

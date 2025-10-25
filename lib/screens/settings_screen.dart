@@ -103,6 +103,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  void _triggerDailyReset(BuildContext context, TaskProvider taskProvider) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Trigger Daily Reset (Testing)'),
+        content: const Text('This will simulate the next day and reset all daily tasks. Non-daily tasks will be deleted. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Trigger Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await taskProvider.manuallyTriggerDailyReset();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Daily reset triggered! Check your tasks.')),
+        );
+      }
+    }
+  }
+
   void _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -124,18 +157,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed == true) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      
+
       // Clear user data
       await userProvider.clearUserData();
       taskProvider.setUserContext(null);
-      
+
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Logged out successfully')),
         );
       }
-      
+
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
@@ -1064,6 +1097,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: const Text('Restore Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 30),
+            // Trigger daily reset (for testing)
+            Consumer<TaskProvider>(
+              builder: (context, taskProvider, child) {
+                return ElevatedButton(
+                  onPressed: () => _triggerDailyReset(context, taskProvider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('🧪 Trigger Daily Reset (Testing)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                );
+              },
             ),
             const SizedBox(height: 30),
             // Clear all data

@@ -529,7 +529,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 ...List.generate(tasks.length, (i) {
                   final t = tasks[i];
                   return Dismissible(
-                    key: ValueKey(t.hashCode.toString() + t.title),
+                    key: ValueKey(t.id),
                     direction: DismissDirection.endToStart,
                     background: Container(
                       margin: const EdgeInsets.only(bottom: 14),
